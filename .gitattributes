@@ -1,0 +1,41 @@
+# ==============================================================================
+# .gitattributes
+# The team develops on Windows. Without this file, CRLF/LF churn produces diffs
+# where "nothing changed", which makes code review noisy and hides real edits.
+# ==============================================================================
+
+# Normalise line endings in the repo (LF), check out native on each platform.
+* text=auto
+
+# Force LF for files that break with CRLF
+*.py    text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+*.cfg   text eol=lf
+*.toml  text eol=lf
+*.sh    text eol=lf
+
+# Windows-native scripts keep CRLF
+*.bat   text eol=crlf
+*.ps1   text eol=crlf
+
+# Binary — never diff or normalise these
+*.joblib  binary
+*.pkl     binary
+*.npz     binary
+*.npy     binary
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.mp4     binary
+*.pdf     binary
+*.xlsx    binary
+*.pptx    binary
+*.docx    binary
+
+# Notebooks: mark as text but suppress diffs (JSON noise is unreadable)
+*.ipynb  text
+*.ipynb  -diff

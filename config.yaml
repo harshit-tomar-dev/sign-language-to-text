@@ -1,0 +1,391 @@
+# ==============================================================================
+# Real-Time Sign Language to Text Conversion System
+# Central configuration — SINGLE SOURCE OF TRUTH
+# ==============================================================================
+#
+# RULE: No module may hard-code any value that appears in this file.
+#       Every value is read through src/sign_language/config/loader.py.
+#
+# TUNING STATUS legend used in comments below:
+#   [FIXED]        Determined by the problem / library. Do not change casually.
+#   [TUNE:Phase-N] Placeholder. Must be determined experimentally in that phase.
+#                  Values present today are STARTING POINTS, not results.
+#
+# Anything marked TBD has NOT been measured yet. Never replace a TBD with a
+# guess — replace it only with a number produced by a script in this repo.
+# ==============================================================================
+
+project:
+  name: "Real-Time Sign Language to Text Conversion System"
+  short_name: "sign-language-to-text"
+  # Semver form here; pyproject.toml carries the PEP 440 equivalent "0.1.0a0".
+  # These are the SAME version in two required notations — keep them in sync.
+  version: "0.1.0-alpha"        # bumped per PHASES.md completion
+  description: >
+    Recognises a controlled vocabulary of static, single-hand signs from a live
+    webcam feed and composes the recognised signs into text in real time.
+  institution: "SRM Institute of Science and Technology"
+  course: "Machine Learning (B.Tech CSE)"
+  # Team roster lives in docs/PRD.md, not in source code (see RULES.md §No-Hardcoding).
+
+# ------------------------------------------------------------------------------
+# Reproducibility
+# ------------------------------------------------------------------------------
+reproducibility:
+  random_seed: 42               # [FIXED] used for numpy, python-random, sklearn
+  deterministic: true
+  # Any script that splits, shuffles, or samples MUST call utils.seeding.set_global_seed()
+
+# ------------------------------------------------------------------------------
+# Camera
+# ------------------------------------------------------------------------------
+camera:
+  index: 0                      # [TUNE:Phase-1] 0 = default webcam; try 1,2 if wrong device
+  width: 1280
+  height: 720
+  target_fps: 30
+  flip_horizontal: true         # [FIXED] mirror view feels natural to the signer
+  # ---- HANDEDNESS CONVENTION — RESOLVED in Phase 2 --------------------------------
+  # MediaPipe Hands determines handedness assuming it receives a MIRRORED (selfie-style)
+  # input image. From MediaPipe's own documentation:
+  #   "If that is not the case, use cv2.flip(image, 1) to flip the image first for
+  #    a correct handedness output."
+  # A raw webcam frame is NOT mirrored (it is a camera-view / photograph-view).
+  # EMPIRICALLY VERIFIED (Phase 2): passing the raw unflipped frame causes MediaPipe
+  # to return inverted labels (physical Right → reported as "Left").
+  # FIX: HandDetector.detect_all() internally flips the frame before passing to MediaPipe,
+  # then un-flips the returned landmark X coordinates (x → 1-x) so that all downstream
+  # consumers receive coordinates in the ORIGINAL (raw) camera-frame space with
+  # physically correct handedness labels. This convention is identical in data collection
+  # and real-time inference — callers always pass the raw frame.
+  detect_before_flip: false     # [FIXED] see hand_detector.py module docstring for rationale
+
+  # Windows note: CAP_DSHOW avoids the ~2-5s MSMF open delay. See TROUBLESHOOTING.md
+  backend: "auto"               # auto | dshow | msmf | v4l2 | any
+  warmup_frames: 5              # discard first N frames (auto-exposure settling)
+  read_timeout_ms: 2000
+
+# ------------------------------------------------------------------------------
+# Hand detection (MediaPipe Hands)
+# ------------------------------------------------------------------------------
+hand_detection:
+  # Set to 2, NOT 1, deliberately. V1's vocabulary is single-hand, but if we asked
+  # MediaPipe for only one hand we could never DETECT that the user has two hands in
+  # frame — the "multiple hands detected" warning required by the PRD would be
+  # unreachable code. So we detect up to 2 and then select one via multi_hand_policy.
+  max_num_hands: 2
+  min_detection_confidence: 0.7         # [TUNE:Phase-2]
+  min_tracking_confidence: 0.5          # [TUNE:Phase-2]
+  model_complexity: 0                   # 0 = lite/fast, 1 = full/accurate [TUNE:Phase-13]
+  static_image_mode: false              # false = video mode, enables tracking
+  # When 2 hands are visible we keep exactly ONE and raise a user-facing warning.
+  # highest_confidence | largest | reject   (reject = emit nothing; strictest, safest)
+  # See ARCHITECTURE.md §Error Handling.
+  multi_hand_policy: "highest_confidence"
+
+# ------------------------------------------------------------------------------
+# Feature engineering
+# ------------------------------------------------------------------------------
+features:
+  # MediaPipe returns 21 landmarks, each with (x, y, z) → 21 * 3 = 63 raw values.
+  num_landmarks: 21             # [FIXED] MediaPipe Hands topology
+  coords_per_landmark: 3        # [FIXED] x, y, z
+  base_dim: 63                  # [FIXED] = num_landmarks * coords_per_landmark
+
+  # --- Normalisation chain (order matters, applied top to bottom) ---
+  translation_invariant: true   # subtract wrist (landmark 0) → removes hand POSITION
+  scale_invariant: true         # divide by max distance from wrist → removes DISTANCE-to-camera
+  rotation_invariant: false     # [DELIBERATELY FALSE] see MODEL.md §Why-No-Rotation-Norm.
+                                # Our vocabulary distinguishes PLEASE from THANK_YOU by palm
+                                # orientation. Rotation-normalising would destroy that signal.
+  mirror_left_to_right: true    # canonicalise handedness by negating x for left hands,
+                                # so one model serves both hands. See MODEL.md §Handedness.
+
+  # --- Optional extended feature set (for the Phase 5 ablation study) ---
+  use_extended: false           # [TUNE:Phase-5] true → base_dim + engineered features
+  extended:
+    fingertip_distances: true         # 5 fingertip→wrist distances
+    inter_fingertip_distances: true   # 10 pairwise fingertip distances
+    finger_curl_angles: true          # 5 joint angles (one per finger)
+    extended_dim: 83                  # 63 + 5 + 10 + 5. features/registry.py ASSERTS
+                                      # this at runtime; a mismatch is a hard error, not
+                                      # a warning, because a silently wrong feature width
+                                      # produces confident nonsense rather than a crash.
+
+  feature_set_version: "v1-base-63"   # written into model_metadata.json; a model
+                                      # may only run on the feature set it was trained on.
+
+# ------------------------------------------------------------------------------
+# Dataset
+# ------------------------------------------------------------------------------
+dataset:
+  # --- V1 vocabulary: 12 signs + 1 neutral class = 13 classes ---
+  # Handshapes are chosen to be INTRINSICALLY separable (differ by finger
+  # configuration or palm orientation), NOT by where the hand is in the frame —
+  # because translation_invariant:true discards absolute position.
+  # See DATASET.md §Vocabulary-Design for the full rationale.
+  # [CRITICAL] Every class name is QUOTED. This is not stylistic.
+  # YAML 1.1 resolves the bare tokens YES / NO / ON / OFF / TRUE / FALSE / Y / N
+  # to booleans. Unquoted, `- YES` parses as Python True and `- NO` as False —
+  # which would create directories named "True"/"False", break the label encoder,
+  # and make `neutral_class in classes` checks behave unpredictably.
+  # Defect found in the Phase 0 audit (audit item 12). Keep the quotes.
+  classes:
+    - "HELLO"         # open palm, 5 fingers spread, palm to camera
+    - "THANK_YOU"     # flat palm, fingers together, palm to camera, fingers up
+    - "PLEASE"        # flat palm, fingers together, palm rotated to face upward
+    - "YES"           # closed fist, thumb extended UP        <- MUST be quoted
+    - "NO"            # closed fist, thumb extended DOWN      <- MUST be quoted
+    - "SORRY"         # closed fist, thumb tucked, knuckles to camera
+    - "HELP"          # thumb up + index sideways (L shape)
+    - "NAME"          # index + middle extended and held TOGETHER
+    - "WATER"         # index + middle + ring extended and SPREAD (W shape)
+    - "EAT"           # all fingertips curled toward thumb (claw / pinch)
+    - "I_LOVE_YOU"    # thumb + index + pinky extended, middle + ring folded
+    - "YOU"           # index finger only, extended
+    - "_NEUTRAL"      # relaxed / idle hand — produces NO text output
+
+  neutral_class: "_NEUTRAL"     # [IMPORTANT] rejection class. Without it the model is
+                                # forced to label a resting hand as some real sign.
+
+  # --- Collection targets ---
+  samples_per_class_target: 330   # [TUNE:Phase-3] ~6 sessions x ~55 samples
+  samples_per_class_minimum: 200  # below this, training script REFUSES to run
+  sessions_per_class_minimum: 4   # [CRITICAL] multi-session is what makes the
+                                  # group-aware split meaningful. See §Leakage below.
+  # CONSTRAINT that must hold:
+  #   sessions_per_class_minimum * samples_per_session_cap >= samples_per_class_target
+  #   4 * 90 = 360 >= 330  ✓
+  # At a cap of 80 this gives 320, and the 330 target would be UNREACHABLE for a team
+  # that collects only the minimum number of sessions. Validated at startup.
+  samples_per_session_cap: 90     # prevents one session dominating a class
+
+  capture_fps: 8                  # [TUNE:Phase-3] deliberately LOW. Capturing at 30 fps
+                                  # while holding a pose yields near-duplicate frames,
+                                  # which inflates dataset size without adding information.
+  countdown_seconds: 3            # preparation time before capture starts
+  save_debug_images: true         # save 1 JPEG per N samples to data/raw/ as an audit trail
+  debug_image_every_n: 20
+
+  # --- Validation rules enforced by data_collection/validator.py ---
+  validation:
+    require_all_landmarks: true       # reject frame if MediaPipe returns partial landmarks
+    reject_out_of_bounds: true        # reject if any x/y outside [coord_min, coord_max]
+    # MediaPipe normalises x/y to [0,1] but MAY return values slightly outside when the
+    # hand is partly off-screen. A little slack is normal; far beyond it means the hand
+    # is clipped and the landmarks are guesses. Explicit keys, not magic numbers.
+    coord_min: -0.5
+    coord_max: 1.5
+    min_hand_bbox_fraction: 0.04      # hand must occupy >=4% of frame (too far away)
+    max_hand_bbox_fraction: 0.90      # hand must occupy <=90% of frame (too close)
+    max_duplicate_similarity: 0.9995  # cosine sim vs previous accepted sample
+
+# ------------------------------------------------------------------------------
+# Data splitting — LEAKAGE PREVENTION
+# ------------------------------------------------------------------------------
+# THE CORE PROBLEM: samples captured within one continuous recording session are
+# highly correlated (same lighting, same hand, same pose, frames milliseconds
+# apart). A random train_test_split scatters near-identical frames across train
+# and test, so the test set is effectively already memorised → accuracy looks
+# ~99% and collapses in real use.
+#
+# THE FIX: split by SESSION, never by sample. Every sample carries a session_id;
+# all samples from one session land entirely in train, OR entirely in val, OR
+# entirely in test. Implemented with sklearn StratifiedGroupKFold.
+# Read DATASET.md §Data-Leakage before changing anything here.
+# ------------------------------------------------------------------------------
+split:
+  strategy: "grouped_by_session"   # grouped_by_session | random (random = FOR DEMO OF
+                                   # LEAKAGE ONLY, never for reported results)
+  group_column: "session_id"
+  test_size: 0.20
+  val_size: 0.15                   # taken from the remaining 80%
+  cv_folds: 5                      # StratifiedGroupKFold folds for model selection
+  stratify: true
+  shuffle: true
+  # Phase 7 must report BOTH grouped and random-split scores side by side. The gap
+  # between them is the quantified leakage, and it is a strong viva talking point.
+  report_leakage_comparison: true
+
+# ------------------------------------------------------------------------------
+# Model training
+# ------------------------------------------------------------------------------
+training:
+  # Candidates compared in Phase 6. Winner selected on grouped CV macro-F1.
+  candidates:
+    - logistic_regression       # linear baseline — establishes the floor
+    - knn                       # instance-based, no real training
+    - svm_rbf                   # strong on small, dense, normalised vectors
+    - random_forest             # robust, gives feature importances
+    - extra_trees
+    - mlp                       # sklearn MLPClassifier (NOT a deep learning framework)
+
+  primary_metric: "macro_f1"    # macro (not weighted) so rare classes count equally
+  secondary_metrics: ["accuracy", "macro_precision", "macro_recall", "balanced_accuracy"]
+
+  scaler: "standard"            # standard | minmax | none  [TUNE:Phase-6]
+                                # Required for svm_rbf / knn / mlp / logistic_regression.
+                                # Tree models are scale-invariant but the scaler is kept
+                                # inside the Pipeline so serialisation stays uniform.
+
+  search:
+    method: "grid"              # grid | random  [TUNE:Phase-6]
+    n_iter: 40                  # only used when method == random
+    scoring: "f1_macro"
+    n_jobs: -1
+    verbose: 1
+    refit: true
+
+  # Hyperparameter grids. Deliberately small — this dataset is small, and an
+  # oversized grid on ~4k samples overfits the validation folds.
+  grids:
+    logistic_regression:
+      C: [0.1, 1.0, 10.0]
+      max_iter: [2000]
+    knn:
+      n_neighbors: [3, 5, 7, 9]
+      weights: ["uniform", "distance"]
+      metric: ["euclidean", "manhattan"]
+    svm_rbf:
+      C: [1.0, 10.0, 100.0]
+      gamma: ["scale", 0.01, 0.1]
+    random_forest:
+      n_estimators: [200, 400]
+      max_depth: [null, 12, 24]
+      min_samples_leaf: [1, 2]
+    extra_trees:
+      n_estimators: [200, 400]
+      max_depth: [null, 12, 24]
+    mlp:
+      # YAML has no tuple type; training/candidates.py converts each inner list to a
+      # tuple before passing it to MLPClassifier, which requires tuple(int, ...).
+      hidden_layer_sizes: [[64], [128, 64]]
+      alpha: [0.0001, 0.001]
+      max_iter: [600]
+
+  class_weight: "balanced"      # guards against uneven samples per class
+  fail_on_class_imbalance_ratio: 3.0   # abort if largest/smallest class > 3x
+
+# ------------------------------------------------------------------------------
+# Model artifacts & versioning
+# ------------------------------------------------------------------------------
+model:
+  # Artifacts live in {paths.models}/{version}/ — e.g. models/v1/. That path is DERIVED
+  # by utils/paths.py and deliberately not duplicated as its own key, so there is exactly
+  # one way to compute it.
+  version: "v1"
+  classifier_file: "sign_classifier.joblib"    # full sklearn Pipeline (scaler + clf)
+  label_encoder_file: "label_encoder.joblib"
+  metadata_file: "model_metadata.json"         # feature_set_version, metrics, git SHA, dates
+  # Loader REFUSES to run a model whose feature_set_version != features.feature_set_version.
+  enforce_feature_version_match: true
+
+# ------------------------------------------------------------------------------
+# Real-time inference & prediction stabilisation
+# ------------------------------------------------------------------------------
+inference:
+  confidence_threshold: 0.80    # [TUNE:Phase-9] below this → show "uncertain", emit nothing
+
+  stabilisation:
+    # Prevents "HELLO HELLO HELLO HELLO" from one held gesture.
+    enabled: true
+    window_size: 10             # [TUNE:Phase-9] frames in the rolling vote buffer
+    # NAMED CAREFULLY. With smoothing "majority_vote" this is a VOTE COUNT within the
+    # rolling window — NOT a strict consecutive run. "7 of the last 10" is deliberately
+    # more robust than "7 in a row", because a single dropped or noisy frame does not
+    # reset all accumulated progress. Must satisfy: min_votes_in_window <= window_size.
+    min_votes_in_window: 7      # [TUNE:Phase-9]
+    smoothing: "majority_vote"  # majority_vote | probability_average | ema
+    ema_alpha: 0.4              # only used when smoothing == ema
+
+    # After a sign is committed, ignore further predictions for this long. This is
+    # the debounce that stops one gesture emitting many characters.
+    cooldown_seconds: 1.2       # [TUNE:Phase-9]
+
+    # A committed sign will not be re-committed until the hand passes through
+    # _NEUTRAL (or leaves frame). This is what lets the user sign the SAME word twice.
+    require_neutral_between_repeats: true
+    max_buffer_age_seconds: 2.0   # clear stale buffer if hand disappears
+
+# ------------------------------------------------------------------------------
+# Text composition
+# ------------------------------------------------------------------------------
+text:
+  separator: " "
+  max_length: 500
+  auto_capitalise: false        # V1 emits raw labels; formatting is a display concern
+  strip_underscores: true       # THANK_YOU → "THANK YOU" for display only
+  # Control gestures are NOT part of V1's trained vocabulary — they are keyboard/button
+  # actions in the UI. Adding them as trained signs is Phase 10 future work.
+  enable_word_suggestions: false   # future
+  enable_text_to_speech: false     # future
+
+# ------------------------------------------------------------------------------
+# User interface
+# ------------------------------------------------------------------------------
+ui:
+  mode: "desktop"               # desktop (CustomTkinter) | hud (OpenCV window only)
+  window_title: "Sign Language to Text"
+  window_width: 1180
+  window_height: 720
+  theme: "dark"                 # dark | light
+  appearance:
+    accent: "#4F8CFF"
+    success: "#3DD68C"
+    warning: "#F5A623"
+    danger: "#FF5C5C"
+    bg: "#12141A"
+    surface: "#1B1E26"
+    text_primary: "#F2F4F8"
+    text_muted: "#8A91A0"
+  font_family: "Segoe UI"       # Windows default; falls back gracefully
+  show_landmarks: true
+  show_fps: true
+  show_confidence_bar: true
+  video_target_width: 720       # display size; does NOT change capture resolution
+
+# ------------------------------------------------------------------------------
+# Logging
+# ------------------------------------------------------------------------------
+logging:
+  level: "INFO"                 # DEBUG | INFO | WARNING | ERROR
+  console: true
+  file: true
+  dir: "logs"
+  filename: "app.log"
+  max_bytes: 5242880            # 5 MB
+  backup_count: 3
+  format: "%(asctime)s | %(levelname)-8s | %(name)-28s | %(message)s"
+  # Landmark coordinates are logged at DEBUG only, never at INFO. See RULES.md §Privacy.
+
+# ------------------------------------------------------------------------------
+# Performance benchmarking (measured in Phase 13 — do not pre-fill results)
+# ------------------------------------------------------------------------------
+performance:
+  targets:
+    min_fps: 15                 # acceptance threshold, see PRD.md §Performance
+    max_inference_latency_ms: 50
+    max_model_load_ms: 2000
+  # null means NOT YET MEASURED. We use null rather than the string "TBD" so that schema
+  # validation stays properly typed (Optional[float]). scripts/benchmark.py writes these;
+  # never fill them in by hand, and never copy an optimistic figure from a blog post.
+  measured:
+    fps: null                     # TBD — measure in Phase 13
+    inference_latency_ms: null    # TBD — measure in Phase 13
+    model_load_ms: null           # TBD — measure in Phase 13
+    end_to_end_latency_ms: null   # TBD — measure in Phase 13
+
+# ------------------------------------------------------------------------------
+# Paths (all relative to project root; resolved by utils/paths.py)
+# ------------------------------------------------------------------------------
+paths:
+  data_raw: "data/raw"
+  data_interim: "data/interim"
+  data_processed: "data/processed"
+  data_features: "data/features"
+  data_metadata: "data/metadata"
+  models: "models"
+  reports: "reports"
+  figures: "reports/figures"
+  metrics: "reports/metrics"
+  logs: "logs"

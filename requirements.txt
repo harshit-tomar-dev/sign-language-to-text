@@ -1,0 +1,75 @@
+# ==============================================================================
+# Real-Time Sign Language to Text Conversion System — runtime dependencies
+# ==============================================================================
+#
+# Python 3.10 or 3.11 REQUIRED.
+#   - Python 3.13 has NO MediaPipe wheels. `pip install mediapipe` will fail with
+#     "Could not find a version that satisfies the requirement mediapipe".
+#   - Python 3.12 support is patchy across MediaPipe releases.
+#   - 3.10 / 3.11 are the safe choices. Verify with: python --version
+#
+# ------------------------------------------------------------------------------
+# !! VERIFICATION STATUS: NOT YET VERIFIED ON THIS MACHINE !!
+# ------------------------------------------------------------------------------
+# These constraints are based on known-compatible combinations, but they have NOT
+# been resolved against PyPI on your system yet. Phase 1 exists specifically to
+# verify them. After a successful install, run:
+#
+#     pip freeze > requirements.lock.txt
+#
+# and commit that lock file. THAT is the reproducible artifact; this file only
+# expresses intent. See docs/PHASES.md Phase 1 and docs/TROUBLESHOOTING.md.
+# ------------------------------------------------------------------------------
+
+# --- CRITICAL CONSTRAINT: numpy must stay on the 1.x line -----------------------
+# MediaPipe 0.10.x was built against the numpy 1.x C ABI. Installing numpy 2.x
+# alongside it typically produces, at import time:
+#     "A module that was compiled using NumPy 1.x cannot be run in NumPy 2.x"
+# opencv-python wheels of this era are also 1.x-ABI. Pinning numpy<2 is the single
+# most important line in this file. If you relax it, expect import-time crashes.
+numpy>=1.24,<2.0
+
+# --- Computer vision -----------------------------------------------------------
+# opencv-python (NOT opencv-python-headless — we need GUI windows for the HUD,
+# and NOT opencv-contrib-python — we use no contrib modules).
+# Installing more than one opencv variant in the same environment breaks cv2.
+opencv-python>=4.8,<5.0
+
+# --- Hand landmark detection ---------------------------------------------------
+# Pinned tightly: MediaPipe's Python API changed between minor versions, and the
+# legacy `mediapipe.solutions.hands` API we rely on is deprecated in newer builds.
+mediapipe>=0.10.9,<0.10.15
+
+# --- Data handling -------------------------------------------------------------
+pandas>=2.0,<3.0
+
+# --- Machine learning ----------------------------------------------------------
+# >=1.3 required: StratifiedGroupKFold must be available for our leakage-safe
+# splitting strategy (see docs/DATASET.md §Data-Leakage).
+scikit-learn>=1.3,<2.0
+
+# --- Model serialisation -------------------------------------------------------
+joblib>=1.3,<2.0
+
+# --- Configuration -------------------------------------------------------------
+PyYAML>=6.0,<7.0
+
+# --- Evaluation plots ----------------------------------------------------------
+matplotlib>=3.7,<4.0
+# seaborn is used ONLY for the confusion-matrix heatmap in reports/figures/.
+# It is a genuine readability win for a 13x13 matrix, which is why it is included.
+seaborn>=0.13,<0.14
+
+# --- Desktop user interface ----------------------------------------------------
+# tkinter itself ships with the standard CPython Windows installer — it is NOT a
+# pip package. If `import tkinter` fails, re-run the Python installer and enable
+# "tcl/tk and IDLE". On Linux: sudo apt install python3-tk
+customtkinter>=5.2,<6.0
+# Pillow is required to convert OpenCV BGR frames into images Tkinter can display.
+Pillow>=10.0,<12.0
+
+# --- Real-Time Chat ------------------------------------------------------------
+websockets>=12.0
+
+# --- CLI ergonomics ------------------------------------------------------------
+tqdm>=4.66,<5.0
