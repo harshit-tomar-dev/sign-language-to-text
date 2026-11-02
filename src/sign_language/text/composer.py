@@ -15,11 +15,12 @@ SIGN_TO_WORD_MAP: dict[str, str] = {
     "NO": "No",
     "SORRY": "Sorry",
     "HELP": "Help",
-    "NAME": "Name",
     "WATER": "Water",
     "EAT": "Eat",
     "I_LOVE_YOU": "I love you",
     "YOU": "You",
+    "NAME": "My name is",
+    "MY_NAME_IS": "My name is Harshit.",
     "_NEUTRAL": "",  # Neutral does not emit text
 }
 

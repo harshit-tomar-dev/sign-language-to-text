@@ -41,6 +41,13 @@ from sign_language.utils.paths import ensure_dir, resolve
 from sign_language.utils.seeding import set_global_seed
 
 
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
+
 def print_status(cfg, reader: DatasetReader) -> None:
     """Print a clean table showing sample and session counts per sign."""
     class_counts = reader.class_counts()
@@ -56,16 +63,16 @@ def print_status(cfg, reader: DatasetReader) -> None:
         n_samples = class_counts.get(label, 0)
         n_sessions = len(session_counts.get(label, {}))
         pct = min(100.0, (n_sessions / 2.0) * 100.0)
-        bar = "■" * int(pct / 10) + "□" * (10 - int(pct / 10))
+        bar = "[" + "#" * int(pct / 10) + "-" * (10 - int(pct / 10)) + "]"
 
         if n_sessions >= 2:
-            status = "✓ READY TO TRAIN"
+            status = "[READY TO TRAIN]"
         elif n_sessions == 1:
-            status = "◐ 1 SESSION (Need 1 more)"
+            status = "[1 SESSION (Need 1 more)]"
         elif n_samples > 0:
-            status = "… IN PROGRESS"
+            status = "[IN PROGRESS]"
         else:
-            status = "○ NOT STARTED"
+            status = "[NOT STARTED]"
 
         print(f"  {label:<16} {n_samples:>8} {n_sessions:>9}  {bar}  {status}")
 
@@ -102,7 +109,12 @@ def record_sign_sessions(
         print("Press Q or ESC during recording to finish session early.")
         input("Press ENTER to start the 3-second countdown...")
 
-        samples = collector.collect_session(label)
+        samples = collector.collect_session(
+            label,
+            session_num=session_num,
+            total_sessions=target_sessions,
+            target_frames=50,
+        )
         n = writer.write_samples(samples)
         total_new += n
         print(f"✓ Session {session_num} complete: {n} valid samples captured.")

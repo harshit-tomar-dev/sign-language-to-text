@@ -104,6 +104,8 @@ class SignLanguageApp(ctk.CTk):
 
     def _init_pipeline(self) -> None:
         try:
+            self.cooldown_seconds = float(self.cfg.inference.stabilisation.cooldown_seconds)
+            self.prediction_buffer = deque(maxlen=int(self.cfg.inference.stabilisation.window_size))
             self.detector = HandDetector(
                 max_num_hands=1,
                 min_detection_confidence=self.cfg.hand_detection.min_detection_confidence,
@@ -433,9 +435,47 @@ class SignLanguageApp(ctk.CTk):
         )
         self.card_chat.pack(fill="both", expand=True)
 
-        # Chat Connection Header (Room Code, Username, Connect)
+        # Chat Connection Header (Host, Port, Room Code, Username, Connect)
         chat_conn_bar = ctk.CTkFrame(self.card_chat, fg_color="transparent")
-        chat_conn_bar.pack(fill="x", padx=14, pady=(8, 4))
+        chat_conn_bar.pack(fill="x", padx=14, pady=(8, 2))
+
+        host_lbl = ctk.CTkLabel(
+            chat_conn_bar,
+            text="Host:",
+            font=ctk.CTkFont(family="Arial", size=11, weight="bold"),
+            text_color=PALETTE["text_secondary"],
+        )
+        host_lbl.pack(side="left", padx=(0, 2))
+
+        self.entry_host = ctk.CTkEntry(
+            chat_conn_bar,
+            width=95,
+            height=28,
+            font=ctk.CTkFont(family="Arial", size=11),
+            fg_color=PALETTE["video_bg"],
+            border_color=PALETTE["card_border"],
+        )
+        self.entry_host.insert(0, "127.0.0.1")
+        self.entry_host.pack(side="left", padx=(0, 6))
+
+        port_lbl = ctk.CTkLabel(
+            chat_conn_bar,
+            text="Port:",
+            font=ctk.CTkFont(family="Arial", size=11, weight="bold"),
+            text_color=PALETTE["text_secondary"],
+        )
+        port_lbl.pack(side="left", padx=(0, 2))
+
+        self.entry_port = ctk.CTkEntry(
+            chat_conn_bar,
+            width=50,
+            height=28,
+            font=ctk.CTkFont(family="Arial", size=11),
+            fg_color=PALETTE["video_bg"],
+            border_color=PALETTE["card_border"],
+        )
+        self.entry_port.insert(0, "8765")
+        self.entry_port.pack(side="left", padx=(0, 6))
 
         room_lbl = ctk.CTkLabel(
             chat_conn_bar,
@@ -443,18 +483,18 @@ class SignLanguageApp(ctk.CTk):
             font=ctk.CTkFont(family="Arial", size=11, weight="bold"),
             text_color=PALETTE["text_secondary"],
         )
-        room_lbl.pack(side="left", padx=(0, 4))
+        room_lbl.pack(side="left", padx=(0, 2))
 
         self.entry_room = ctk.CTkEntry(
             chat_conn_bar,
-            width=80,
+            width=65,
             height=28,
             font=ctk.CTkFont(family="Arial", size=11),
             fg_color=PALETTE["video_bg"],
             border_color=PALETTE["card_border"],
         )
         self.entry_room.insert(0, "SIGN123")
-        self.entry_room.pack(side="left", padx=(0, 8))
+        self.entry_room.pack(side="left", padx=(0, 6))
 
         user_lbl = ctk.CTkLabel(
             chat_conn_bar,
@@ -462,18 +502,18 @@ class SignLanguageApp(ctk.CTk):
             font=ctk.CTkFont(family="Arial", size=11, weight="bold"),
             text_color=PALETTE["text_secondary"],
         )
-        user_lbl.pack(side="left", padx=(0, 4))
+        user_lbl.pack(side="left", padx=(0, 2))
 
         self.entry_user = ctk.CTkEntry(
             chat_conn_bar,
-            width=90,
+            width=75,
             height=28,
             font=ctk.CTkFont(family="Arial", size=11),
             fg_color=PALETTE["video_bg"],
             border_color=PALETTE["card_border"],
         )
         self.entry_user.insert(0, "Person A")
-        self.entry_user.pack(side="left", padx=(0, 8))
+        self.entry_user.pack(side="left", padx=(0, 6))
 
         self.btn_chat_connect = ctk.CTkButton(
             chat_conn_bar,
@@ -482,10 +522,10 @@ class SignLanguageApp(ctk.CTk):
             fg_color=PALETTE["accent_blue"],
             hover_color=PALETTE["accent_hover"],
             font=ctk.CTkFont(family="Arial", size=11, weight="bold"),
-            width=75,
+            width=68,
             height=28,
         )
-        self.btn_chat_connect.pack(side="left", padx=(0, 8))
+        self.btn_chat_connect.pack(side="left", padx=(0, 6))
 
         self.lbl_chat_status = ctk.CTkLabel(
             chat_conn_bar,
@@ -493,7 +533,7 @@ class SignLanguageApp(ctk.CTk):
             font=ctk.CTkFont(family="Arial", size=11),
             text_color=PALETTE["text_secondary"],
         )
-        self.lbl_chat_status.pack(side="left", padx=4)
+        self.lbl_chat_status.pack(side="left", padx=2)
 
         # Chat Messages Transcript
         self.chat_textbox = ctk.CTkTextbox(
@@ -783,18 +823,29 @@ class SignLanguageApp(ctk.CTk):
     # ========================================================
     def toggle_chat_connection(self) -> None:
         if not self.chat_client.is_connected:
+            host = self.entry_host.get().strip() or "127.0.0.1"
+            port_str = self.entry_port.get().strip() or "8765"
             room = self.entry_room.get().strip().upper() or "SIGN123"
             user = self.entry_user.get().strip() or "Person"
 
-            # Check if local server should be launched
-            if not self.local_server:
-                self.local_server = ChatServer(host="0.0.0.0", port=8765)
-                self.local_server.start_background()
-                time.sleep(0.1)
+            try:
+                port = int(port_str)
+            except ValueError:
+                port = 8765
 
+            # If connecting to localhost or 127.0.0.1 and no server is running, auto-start local server
+            if host in ("localhost", "127.0.0.1", "0.0.0.0") and not self.local_server:
+                try:
+                    self.local_server = ChatServer(host="0.0.0.0", port=port)
+                    self.local_server.start_background()
+                    time.sleep(0.15)
+                except Exception as exc:
+                    logger.warning("Could not auto-start local chat server: %s", exc)
+
+            server_url = f"ws://{host}:{port}"
             self.btn_chat_connect.configure(text="Connecting...", state="disabled")
             self.chat_client.connect(
-                server_url="ws://localhost:8765",
+                server_url=server_url,
                 room=room,
                 sender=user,
             )

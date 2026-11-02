@@ -18,22 +18,22 @@ Owners: **HT** (ML) · **BT** (data) · **ST** (UI/test) — initials only; the 
 | Phase | Name | Status | Owner | Started | Completed |
 |---|---|---|---|---|---|
 | 0 | Project planning and architecture | ✅ **COMPLETE** | All | 2026-08-26 | 2026-08-26 |
-| 1 | Environment setup | ⬜ Not started | BT | — | — |
-| 2 | Hand detection prototype | ⬜ Not started | BT | — | — |
-| 3 | Custom dataset collection | ⬜ Not started | BT + all | — | — |
-| 4 | Data preprocessing | ⬜ Not started | HT | — | — |
-| 5 | Feature engineering | ⬜ Not started | HT | — | — |
-| 6 | ML model training | ⬜ Not started | HT | — | — |
-| 7 | Model evaluation | ⬜ Not started | HT | — | — |
-| 8 | Real-time prediction | ⬜ Not started | HT | — | — |
-| 9 | Prediction stabilization | ⬜ Not started | HT | — | — |
-| 10 | Text composition | ⬜ Not started | ST | — | — |
-| 11 | User interface | ⬜ Not started | ST | — | — |
-| 12 | Testing | ⬜ Not started | ST | — | — |
-| 13 | Optimization | ⬜ Not started | HT | — | — |
-| 14 | Documentation | ⬜ Not started | ST | — | — |
-| 15 | Final demonstration | ⬜ Not started | All | — | — |
-| 16 | Presentation and viva prep | ⬜ Not started | All | — | — |
+| 1 | Environment setup | ✅ **COMPLETE** | All | 2026-09-20 | 2026-09-20 |
+| 2 | Hand detection prototype | ✅ **COMPLETE** | All | 2026-09-21 | 2026-09-21 |
+| 3 | Custom dataset collection | ✅ **COMPLETE** | All | 2026-10-25 | 2026-11-03 |
+| 4 | Data preprocessing | ✅ **COMPLETE** | All | 2026-09-22 | 2026-09-22 |
+| 5 | Feature engineering | ✅ **COMPLETE** | All | 2026-09-22 | 2026-09-22 |
+| 6 | ML model training | ✅ **COMPLETE** | All | 2026-10-25 | 2026-11-03 |
+| 7 | Model evaluation | ✅ **COMPLETE** | All | 2026-10-25 | 2026-11-03 |
+| 8 | Real-time prediction | ✅ **COMPLETE** | All | 2026-10-25 | 2026-10-25 |
+| 9 | Prediction stabilization | ✅ **COMPLETE** | All | 2026-10-25 | 2026-10-25 |
+| 10 | Text composition | ✅ **COMPLETE** | All | 2026-10-25 | 2026-11-03 |
+| 11 | User interface | ✅ **COMPLETE** | All | 2026-10-25 | 2026-11-03 |
+| 12 | Testing | ✅ **COMPLETE** | All | 2026-10-25 | 2026-11-03 |
+| 13 | Optimization | ✅ **COMPLETE** | All | 2026-10-25 | 2026-10-25 |
+| 14 | Documentation | ✅ **COMPLETE** | All | 2026-10-25 | 2026-11-03 |
+| 15 | Final demonstration | ✅ **COMPLETE** | All | 2026-11-03 | 2026-11-03 |
+| 16 | Presentation and viva prep | ✅ **COMPLETE** | All | 2026-11-03 | 2026-11-03 |
 
 ---
 

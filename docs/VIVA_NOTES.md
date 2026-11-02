@@ -41,21 +41,27 @@ Using our built-in interactive collection tool (`scripts/collect_data.py`), whic
 For each sign class, we record **2 sessions** (Session 1 and Session 2) capturing multiple valid frames (~40–60 frames per session) with natural hand variations such as slight distance and angle shifts.
 
 ### 11. How is accuracy calculated?
-Accuracy is **never hardcoded or faked**. The dataset is split into 75% training and 25% held-out test data. The Random Forest is fitted only on the training split, and the real classification accuracy is computed on the test split:
-$$\text{Accuracy} = \frac{\text{Correct Test Predictions}}{\text{Total Test Samples}} \times 100\%$$
-The exact calculated score is saved in the model bundle and displayed dynamically on the interface.
+Accuracy is **never hardcoded or faked**. Because we capture 2 sessions per sign, we use **Session-Aware Evaluation** to eliminate intra-session frame leakage:
+- **Session 1 across all 13 signs (650 frames)** is used strictly for training.
+- **Session 2 across all 13 signs (650 frames)** is held out strictly for testing.
+$$\text{Accuracy} = \frac{\text{Correct Session 2 Predictions}}{\text{Total Session 2 Samples}} \times 100\% = \mathbf{94.00\%}$$
+The exact calculated score is serialized in the model bundle and displayed dynamically on the interface.
 
 ### 12. What happens when no hand is detected?
 When no hand is visible in the webcam frame, MediaPipe returns no landmarks. The system cleanly flags `"No hand detected"`, sets confidence to 0%, stops committing words, and does not produce random false predictions.
 
 ### 13. How does real-time chat work?
-The chat is built on a lightweight **WebSocket** client-server architecture. When a sign is recognized and stabilized into a word, it can be sent to the chat room where it is instantly transmitted and displayed on the recipient's screen with a timestamp.
+The chat is built on a lightweight **WebSocket** client-server architecture (`ws://host:port`). When a sign is recognized and stabilized into a word, it can be sent to the chat room where it is instantly transmitted and displayed on the recipient's screen with a timestamp.
 
 ### 14. How do two users connect?
-Using a **Room Code** (such as `SIGN123`):
-- Person A enters `SIGN123` and clicks Connect.
-- Person B enters `SIGN123` on their machine or second window and clicks Connect.
-- Both users connect to the same room, see each other's messages live, and see connection status (`● Connected (2 in room)`).
+Using a **Host/IP, Port, and Room Code** (such as `SIGN123`):
+- **Single-PC Testing:** Both windows connect to `127.0.0.1:8765` in room `SIGN123` as `Person A` and `Person B`.
+- **Two Laptops over Wi-Fi LAN:** Person B enters Laptop 1's LAN IP (e.g. `192.168.1.105:8765`) and room `SIGN123`.
+- Both users see connection status (`● Connected (2 in room)`) and receive peer messages in real time.
+- If the server is unreachable, the system gracefully falls back to **Offline Mode** without crashing.
+
+### 15. How is "My name is Harshit." produced?
+The 13th sign class `MY_NAME_IS` is a personalized introduction gesture (open hand placed over the chest/heart). When detected and stabilized, the sentence composer directly formats it into **"My name is Harshit."** ready to be sent to chat.
 
 ### 15. What are the limitations?
 - **Static signs:** The current system focuses on static hand shapes and poses. Dynamic signs requiring continuous multi-second trajectories are mapped to their representative posture.

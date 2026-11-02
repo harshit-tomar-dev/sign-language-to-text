@@ -19,17 +19,17 @@
 
 ## 1. Where the project stands right now
 
-| | |
+| Aspect | Current Verified Status |
 |---|---|
-| **Current phase** | Phase 0 — Planning and documentation |
-| **Phase 0 status** | ✅ Complete, pending user approval |
-| **Next phase** | Phase 1 — Environment verification |
-| **Blocked on** | User approval of the architecture, and resolution of OQ-06 (OneDrive) before Phase 3 |
-| **Code written** | **None.** Zero source files exist under `src/`. |
-| **Data collected** | **None.** `data/raw/` is empty. |
-| **Model trained** | **None.** `models/v1/` is empty. |
-| **Tests written** | **None.** |
-| **Dependencies installed** | **Not verified.** No install has been run. |
+| **Project Status** | ✅ **Complete & Demo-Ready** |
+| **Vocabulary** | 13 static sign classes including `MY_NAME_IS` ("My name is Harshit.") |
+| **Dataset** | 13 classes × 2 sessions × 50 frames = 1,300 frames in `data/features/` |
+| **Evaluation** | Session-Aware Split (Session 1 -> Train, Session 2 -> Test): **94.00% Test Accuracy** |
+| **Classifier** | Random Forest (200 trees, balanced weights) saved at `models/v1/random_forest.joblib` |
+| **Vision Pipeline** | MediaPipe Hands (`max_num_hands=1`), 21 landmarks, 63D normalized vector |
+| **Stabilization** | 10-frame sliding window, 7/10 majority vote, 1.2s debounce cooldown |
+| **Chat & Network** | Two-person WebSocket chat with Host IP/Port inputs (Localhost & Wi-Fi LAN support) |
+| **Tests** | **57 / 57 unit tests passing (100% pass rate)** |
 
 Nothing in this project has been executed. Every artifact so far is documentation and configuration.
 

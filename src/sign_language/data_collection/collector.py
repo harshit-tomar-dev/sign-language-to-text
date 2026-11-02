@@ -80,23 +80,26 @@ class SessionCollector:
     # Public API
     # ------------------------------------------------------------------
 
-    def collect_session(self, label: str) -> list[Sample]:
+    def collect_session(
+        self,
+        label: str,
+        session_num: int = 1,
+        total_sessions: int = 2,
+        target_frames: int = 50,
+    ) -> list[Sample]:
         """Run one interactive collection session for the given sign label.
 
-        Displays a live OpenCV window with:
-          - A countdown before capture begins
-          - Real-time HUD showing accepted/rejected count, cap progress, FPS
-          - The hand landmark skeleton overlaid on the display frame
-          - A green "CAPTURING" / yellow "WAITING" status indicator
+        Displays a live OpenCV window showing:
+          - SIGN TO RECORD: {label}
+          - SESSION: {session_num} / {total_sessions}
+          - PROGRESS: {count} / {target_frames} frames
+          - STATUS: Hand detected / No hand detected
 
-        Press **Q** or **ESC** at any time to stop early.
-
-        Args:
-            label: The sign label string (must be in ``config.dataset.classes``).
-
-        Returns:
-            List of accepted ``Sample`` objects for this session.  May be empty
-            if the user exits immediately or no valid frames are detected.
+        Controls:
+          [SPACE]       - Pause / Resume recording
+          [R]           - Restart current session
+          [N]           - Finish session early and proceed to next
+          [Q] or [ESC]  - Stop and exit
         """
         if label not in self._cfg.dataset.classes:
             raise ValueError(
@@ -105,13 +108,16 @@ class SessionCollector:
             )
 
         self._validator.reset()
-        session_id = self._make_session_id(label)
+        session_id = f"{label}_s{session_num:02d}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         samples: list[Sample] = []
+        cap = target_frames or self._session_cap
 
-        logger.info("Starting session %s (label=%s, cap=%d)", session_id, label, self._session_cap)
+        logger.info(
+            "Starting session %s (label=%s, session=%d/%d, cap=%d)",
+            session_id, label, session_num, total_sessions, cap,
+        )
 
-        # Run the live collection loop
-        self._run_loop(label, session_id, samples)
+        self._run_loop(label, session_id, samples, session_num, total_sessions, cap)
 
         logger.info(
             "Session %s complete: %d samples accepted, %d rejected",
@@ -125,16 +131,26 @@ class SessionCollector:
     # Internal loop
     # ------------------------------------------------------------------
 
-    def _run_loop(self, label: str, session_id: str, samples: list[Sample]) -> None:
+    def _run_loop(
+        self,
+        label: str,
+        session_id: str,
+        samples: list[Sample],
+        session_num: int,
+        total_sessions: int,
+        target_frames: int,
+    ) -> None:
         """Main capture loop displayed in an OpenCV window."""
-        window_name = f"Data Collection — {label}"
+        window_name = f"Data Collection — {label} (Session {session_num}/{total_sessions})"
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.resizeWindow(window_name, 960, 560)
 
         capturing = False
+        paused = False
         countdown_start: float | None = None
         last_capture_time: float = 0.0
         frame_index: int = 0
+        session_finished = False
 
         while True:
             frame_raw = self._camera.read(flip=False)
@@ -145,7 +161,8 @@ class SessionCollector:
             h, w = frame_disp.shape[:2]
 
             # Draw skeleton if detected
-            if landmarks is not None:
+            hand_detected = (landmarks is not None)
+            if hand_detected and landmarks is not None:
                 pts_disp = landmarks.points.copy()
                 pts_disp[:, 0] = 1.0 - pts_disp[:, 0]
 
@@ -159,6 +176,23 @@ class SessionCollector:
 
             now = time.monotonic()
 
+            if session_finished:
+                # Flash complete message
+                self._draw_hud(
+                    frame_disp, label,
+                    accepted=len(samples), cap=target_frames,
+                    fps=self._camera.measured_fps,
+                    status="SESSION COMPLETE! Next session loading...",
+                    status_color=(50, 220, 100),
+                    countdown=None,
+                    session_num=session_num,
+                    total_sessions=total_sessions,
+                    hand_detected=hand_detected,
+                )
+                cv2.imshow(window_name, frame_disp)
+                cv2.waitKey(1500)
+                break
+
             # ── Countdown phase ────────────────────────────────────────────
             if not capturing:
                 if countdown_start is None:
@@ -169,11 +203,14 @@ class SessionCollector:
 
                 self._draw_hud(
                     frame_disp, label,
-                    accepted=len(samples), cap=self._session_cap,
+                    accepted=len(samples), cap=target_frames,
                     fps=self._camera.measured_fps,
-                    status="GET READY",
+                    status="GET READY — HOLD SIGN POSE",
                     status_color=(0, 180, 255),  # orange
                     countdown=remaining,
+                    session_num=session_num,
+                    total_sessions=total_sessions,
+                    hand_detected=hand_detected,
                 )
 
                 if remaining <= 0.0:
@@ -183,57 +220,71 @@ class SessionCollector:
 
             # ── Capture phase ──────────────────────────────────────────────
             else:
-                # Enforce capture FPS throttle
-                if now - last_capture_time >= self._capture_interval:
-                    last_capture_time = now
-                    frame_index += 1
+                if not paused:
+                    # Enforce capture FPS throttle
+                    if now - last_capture_time >= self._capture_interval:
+                        last_capture_time = now
+                        frame_index += 1
 
-                    if landmarks is not None:
-                        feature_vector = self._extractor.extract(landmarks)
-                        ok, reason = self._validator.validate(
-                            landmarks, feature_vector,
-                            frame_width=w, frame_height=h,
-                        )
-                        if ok:
-                            sample = Sample(
-                                features=feature_vector,
-                                label=label,
-                                session_id=session_id,
-                                frame_index=frame_index,
-                                feature_set_version=self._extractor.feature_set_version,
+                        if hand_detected and landmarks is not None:
+                            feature_vector = self._extractor.extract(landmarks)
+                            ok, reason = self._validator.validate(
+                                landmarks, feature_vector,
+                                frame_width=w, frame_height=h,
                             )
-                            samples.append(sample)
-                            logger.debug(
-                                "Sample accepted: session=%s frame=%d accepted=%d",
-                                session_id, frame_index, len(samples),
-                            )
+                            if ok:
+                                sample = Sample(
+                                    features=feature_vector,
+                                    label=label,
+                                    session_id=session_id,
+                                    frame_index=frame_index,
+                                    feature_set_version=self._extractor.feature_set_version,
+                                )
+                                samples.append(sample)
 
-                            # Save debug image periodically
-                            if (
-                                self._save_debug
-                                and len(samples) % self._debug_every_n == 0
-                            ):
-                                self._save_debug_image(frame_raw, label, session_id, len(samples))
+                                # Save debug image periodically
+                                if (
+                                    self._save_debug
+                                    and len(samples) % self._debug_every_n == 0
+                                ):
+                                    self._save_debug_image(frame_raw, label, session_id, len(samples))
 
-                status_text = f"CAPTURING  {len(samples)}/{self._session_cap}"
+                # Check if target reached
+                if len(samples) >= target_frames:
+                    session_finished = True
+                    continue
+
+                status_text = "PAUSED (Press SPACE)" if paused else f"RECORDING ({len(samples)}/{target_frames})"
+                color = (255, 160, 50) if paused else (50, 205, 50)
                 self._draw_hud(
                     frame_disp, label,
-                    accepted=len(samples), cap=self._session_cap,
+                    accepted=len(samples), cap=target_frames,
                     fps=self._camera.measured_fps,
                     status=status_text,
-                    status_color=(50, 205, 50),  # green
+                    status_color=color,
                     countdown=None,
+                    session_num=session_num,
+                    total_sessions=total_sessions,
+                    hand_detected=hand_detected,
                 )
-
-                # Check cap
-                if len(samples) >= self._session_cap:
-                    logger.info("Session cap reached (%d samples).", self._session_cap)
-                    break
 
             cv2.imshow(window_name, frame_disp)
             key = cv2.waitKey(1) & 0xFF
+
             if key in (ord("q"), ord("Q"), 27):  # Q or ESC
                 logger.info("Session stopped early by user (Q/ESC).")
+                break
+            elif key == ord(" "):  # SPACE to pause/resume
+                paused = not paused
+            elif key in (ord("r"), ord("R")):  # R to restart session
+                samples.clear()
+                frame_index = 0
+                capturing = False
+                countdown_start = None
+                self._validator.reset()
+                logger.info("Session restarted by user.")
+            elif key in (ord("n"), ord("N")):  # N to proceed to next
+                logger.info("Proceeding to next session (N).")
                 break
 
         cv2.destroyWindow(window_name)
@@ -252,58 +303,79 @@ class SessionCollector:
         status: str,
         status_color: tuple[int, int, int],
         countdown: float | None,
+        session_num: int = 1,
+        total_sessions: int = 2,
+        hand_detected: bool = False,
     ) -> None:
         """Overlay collection HUD onto frame in-place."""
         h, w = frame.shape[:2]
 
         # Top bar background
-        cv2.rectangle(frame, (0, 0), (w, 65), (20, 22, 28), -1)
-        cv2.line(frame, (0, 65), (w, 65), (50, 54, 66), 1)
+        cv2.rectangle(frame, (0, 0), (w, 75), (20, 22, 28), -1)
+        cv2.line(frame, (0, 75), (w, 75), (50, 54, 66), 1)
 
-        # Label name (large)
-        cv2.putText(frame, f"Sign: {label}", (12, 38),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (242, 244, 248), 2, cv2.LINE_AA)
+        # Label name
+        cv2.putText(frame, f"SIGN TO RECORD: {label}", (12, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
 
-        # FPS (right side)
+        # Session indicator
+        cv2.putText(frame, f"SESSION: {session_num} / {total_sessions}", (12, 60),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 200, 255), 2, cv2.LINE_AA)
+
+        # Hand detection status indicator (top-right)
+        if hand_detected:
+            h_status = "Hand detected"
+            h_color = (80, 220, 80)
+        else:
+            h_status = "No hand detected"
+            h_color = (80, 80, 240)
+        cv2.putText(frame, h_status, (w - 240, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.60, h_color, 2, cv2.LINE_AA)
+
+        # FPS (top-right under hand status)
         fps_text = f"FPS: {fps:.1f}"
-        fps_tw, _ = cv2.getTextSize(fps_text, cv2.FONT_HERSHEY_SIMPLEX, 0.55, 1)[0], None
-        cv2.putText(frame, fps_text, (w - fps_tw[0] - 12, 30),
+        cv2.putText(frame, fps_text, (w - 120, 60),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55, (138, 145, 160), 1, cv2.LINE_AA)
 
-        # Status bar (bottom)
-        cv2.rectangle(frame, (0, h - 55), (w, h), (20, 22, 28), -1)
-        cv2.line(frame, (0, h - 55), (w, h - 55), (50, 54, 66), 1)
+        # Bottom bar background
+        cv2.rectangle(frame, (0, h - 70), (w, h), (20, 22, 28), -1)
+        cv2.line(frame, (0, h - 70), (w, h - 70), (50, 54, 66), 1)
 
-        cv2.putText(frame, status, (12, h - 25),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.75, status_color, 2, cv2.LINE_AA)
+        # Status text & Progress
+        cv2.putText(frame, status, (12, h - 42),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.70, status_color, 2, cv2.LINE_AA)
 
-        # Progress bar
-        bar_x = 12
-        bar_y = h - 12
-        bar_w = w - 24
+        progress_str = f"PROGRESS: {accepted} / {cap} frames"
+        cv2.putText(frame, progress_str, (w - 320, h - 42),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (242, 244, 248), 2, cv2.LINE_AA)
+
+        # Hotkeys help text
+        help_text = "[SPACE] Pause/Resume | [R] Restart | [N] Next | [Q/ESC] Stop"
+        cv2.putText(frame, help_text, (12, h - 18),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (140, 145, 155), 1, cv2.LINE_AA)
+
+        # Progress bar line at the very bottom
+        bar_x = 0
+        bar_y = h - 6
+        bar_w = w
         bar_h = 6
         progress = min(1.0, accepted / cap) if cap > 0 else 0.0
-        cv2.rectangle(frame, (bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h), (50, 54, 66), -1)
+        cv2.rectangle(frame, (bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h), (40, 44, 54), -1)
         cv2.rectangle(frame, (bar_x, bar_y),
                       (bar_x + int(bar_w * progress), bar_y + bar_h), status_color, -1)
 
         # Countdown overlay (centre of frame)
         if countdown is not None and countdown > 0:
             ct = str(int(countdown) + 1)
-            font_scale = 6.0
-            thickness = 8
+            font_scale = 5.0
+            thickness = 7
             (tw, th), _ = cv2.getTextSize(ct, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
             cx = (w - tw) // 2
             cy = (h + th) // 2 - 20
             cv2.putText(frame, ct, (cx, cy),
                         cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 180, 255), thickness, cv2.LINE_AA)
-            cv2.putText(frame, "GET READY", (cx - 60, cy + 60),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (242, 244, 248), 2, cv2.LINE_AA)
-
-        # Sample count top-right
-        count_text = f"{accepted}/{cap}"
-        cv2.putText(frame, count_text, (w - 110, 55),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (138, 145, 160), 1, cv2.LINE_AA)
+            cv2.putText(frame, "PREPARE SIGN", (cx - 80, cy + 50),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (242, 244, 248), 2, cv2.LINE_AA)
 
     # ------------------------------------------------------------------
     # Debug image saving

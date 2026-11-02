@@ -109,8 +109,8 @@ class ChatClient:
                         pass
 
         except (ConnectionRefusedError, OSError) as e:
-            self._notify_status(False, f"Cannot reach server ({self.server_url})")
-            logger.info("Connection failed: %s", e)
+            self._notify_status(False, "Offline Mode (Server unreachable)")
+            logger.info("Connection failed (Offline Mode): %s", e)
         except Exception as e:
             self._notify_status(False, "Disconnected")
             logger.info("Connection exception: %s", e)
