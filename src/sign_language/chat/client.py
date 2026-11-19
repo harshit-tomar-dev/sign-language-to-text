@@ -21,9 +21,11 @@ class ChatClient:
         self,
         on_message: Callable[[str, str, str, bool], None] | None = None,
         on_status: Callable[[bool, str, int], None] | None = None,
+        on_video_frame: Callable[[str, str], None] | None = None,
     ) -> None:
         self.on_message = on_message
         self.on_status = on_status
+        self.on_video_frame = on_video_frame
 
         self.server_url: str = "ws://localhost:8765"
         self.room: str = "SIGN123"
@@ -122,6 +124,11 @@ class ChatClient:
                     data = json.loads(raw)
                     msg_type = data.get("type", "message")
                     sender = data.get("sender", "Anonymous")
+                    if msg_type == "video_frame":
+                        if self.on_video_frame:
+                            self.on_video_frame(sender, data.get("image", ""))
+                        continue
+
                     text = data.get("text", "")
                     t_str = data.get("timestamp") or datetime.now().strftime("%H:%M:%S")
                     users_count = int(data.get("users_count", 1))
@@ -142,6 +149,23 @@ class ChatClient:
                     await ws.send(msg_json)
         except asyncio.CancelledError:
             pass
+
+    def send_video_frame(self, base64_image: str) -> bool:
+        """Enqueue a compressed video frame to stream over WebSocket."""
+        if not self.is_connected or self._loop is None or self._outbox is None:
+            return False
+
+        payload = json.dumps({
+            "type": "video_frame",
+            "room": self.room,
+            "sender": self.sender,
+            "image": base64_image,
+        })
+        try:
+            self._loop.call_soon_threadsafe(self._outbox.put_nowait, payload)
+            return True
+        except Exception:
+            return False
 
     def send_message(self, text: str) -> bool:
         """Enqueue message to be sent over WebSocket."""

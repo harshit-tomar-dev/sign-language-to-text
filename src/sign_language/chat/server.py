@@ -205,7 +205,7 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
 <body>
   <header>
     <div class="header-title">
-      <h1>Sign Language Live Chat</h1>
+      <h1>Sign Language Live Chat & Video Call</h1>
       <span>SRM Institute of Science and Technology · Academic Live Demo</span>
     </div>
     <div class="top-controls">
@@ -215,6 +215,19 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
       <div id="statusBadge" class="status-badge">Connecting...</div>
     </div>
   </header>
+
+  <!-- Dual Camera Video Bar: Harshit's Live Camera + Friend's Live Camera -->
+  <div id="video-grid" style="display: flex; gap: 12px; padding: 10px 18px; background: #020617; border-bottom: 1px solid #334155; justify-content: center; flex-wrap: wrap;">
+    <div style="position: relative; width: 320px; height: 190px; background: #0F172A; border-radius: 8px; overflow: hidden; border: 1px solid #334155; display: flex; align-items: center; justify-content: center;">
+      <img id="remoteVideo" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
+      <span id="remotePlaceholder" style="font-size: 12px; color: #94A3B8; text-align: center; padding: 10px;">Waiting for Harshit's Live Camera...</span>
+      <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(15, 23, 42, 0.85); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: #F8FAFC;">Harshit (Person A)</div>
+    </div>
+    <div style="position: relative; width: 320px; height: 190px; background: #0F172A; border-radius: 8px; overflow: hidden; border: 1px solid #334155; display: flex; align-items: center; justify-content: center;">
+      <video id="localVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover;"></video>
+      <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(15, 23, 42, 0.85); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: #F8FAFC;">Your Camera (Person B)</div>
+    </div>
+  </div>
 
   <div id="chat-container"></div>
 
@@ -226,10 +239,46 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
   <script>
     let ws = null;
     let isConnected = false;
+    let localStream = null;
+    const canvas = document.createElement("canvas");
+    canvas.width = 320;
+    canvas.height = 240;
+    const ctx = canvas.getContext("2d");
 
     function getWsUrl() {
       const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
       return `${proto}//${window.location.host}`;
+    }
+
+    async function startCamera() {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 320 }, height: { ideal: 240 } },
+          audio: false
+        });
+        const localVideo = document.getElementById("localVideo");
+        localVideo.srcObject = localStream;
+
+        // Send video frame every 120ms
+        setInterval(() => {
+          if (!ws || ws.readyState !== WebSocket.OPEN) return;
+          if (localVideo.videoWidth > 0 && localVideo.videoHeight > 0) {
+            ctx.drawImage(localVideo, 0, 0, 320, 240);
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.5);
+            const base64 = dataUrl.split(",")[1];
+            const room = document.getElementById("roomCode").value.trim().toUpperCase() || "SIGN123";
+            const sender = document.getElementById("userName").value.trim() || "Person B";
+            ws.send(JSON.stringify({
+              type: "video_frame",
+              room: room,
+              sender: sender,
+              image: base64
+            }));
+          }
+        }, 120);
+      } catch (err) {
+        console.log("Webcam not available:", err);
+      }
     }
 
     function initConnection() {
@@ -263,6 +312,14 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          if (data.type === "video_frame") {
+            const remoteImg = document.getElementById("remoteVideo");
+            const remotePlaceholder = document.getElementById("remotePlaceholder");
+            remoteImg.src = "data:image/jpeg;base64," + data.image;
+            remoteImg.style.display = "block";
+            if (remotePlaceholder) remotePlaceholder.style.display = "none";
+            return;
+          }
           renderMessage(data);
         } catch (e) {
           console.error("Invalid message format:", event.data);
@@ -278,6 +335,7 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
       ws.onerror = (err) => {
         console.error("WebSocket error:", err);
       };
+    }
     }
 
     function toggleConnection() {
@@ -348,8 +406,11 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
       }
     }
 
-    // Connect automatically when page loads
-    window.addEventListener("DOMContentLoaded", initConnection);
+    // Connect automatically and start camera when page loads
+    window.addEventListener("DOMContentLoaded", () => {
+      initConnection();
+      startCamera();
+    });
   </script>
 </body>
 </html>
@@ -420,6 +481,18 @@ class ChatServer:
                     })
                     await self._broadcast_room(room, payload)
 
+                elif msg_type == "video_frame":
+                    # Video streaming frame: forward to all OTHER clients in the room
+                    image_data = data.get("image", "")
+                    if image_data and room in self.rooms:
+                        frame_payload = json.dumps({
+                            "type": "video_frame",
+                            "room": room,
+                            "sender": sender,
+                            "image": image_data,
+                        })
+                        await self._broadcast_room(room, frame_payload, exclude=websocket)
+
         except websockets.exceptions.ConnectionClosed:
             pass
         finally:
@@ -440,12 +513,14 @@ class ChatServer:
                 if not self.rooms[current_room]:
                     del self.rooms[current_room]
 
-    async def _broadcast_room(self, room: str, message: str) -> None:
+    async def _broadcast_room(self, room: str, message: str, exclude: Any = None) -> None:
         if room not in self.rooms:
             return
 
         dead_sockets = []
         for ws in list(self.rooms[room].keys()):
+            if exclude is not None and ws == exclude:
+                continue
             try:
                 await ws.send(message)
             except Exception:

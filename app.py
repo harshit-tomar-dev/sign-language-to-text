@@ -7,6 +7,7 @@ Institution: SRM Institute of Science and Technology
 
 from __future__ import annotations
 
+import base64
 import logging
 import os
 import sys
@@ -78,6 +79,7 @@ class SignLanguageApp(ctk.CTk):
         self.chat_client = ChatClient(
             on_message=self._on_chat_message,
             on_status=self._on_chat_status,
+            on_video_frame=self._on_remote_video_frame,
         )
         self.local_server: ChatServer | None = None
 
@@ -211,16 +213,51 @@ class SignLanguageApp(ctk.CTk):
         )
         self.fps_lbl.pack(side="right")
 
-        # Camera Display Canvas
+        # Camera Feeds Container (Single camera for demonstration to Sir; Dual camera when friend connects)
+        self.video_container = ctk.CTkFrame(self.left_col, fg_color="transparent")
+        self.video_container.pack(fill="both", expand=True, padx=14, pady=6)
+
+        # 1. Primary Local Camera (You - Person A)
+        self.local_cam_card = ctk.CTkFrame(self.video_container, fg_color=PALETTE["video_bg"], corner_radius=8)
+        self.local_cam_card.pack(fill="both", expand=True, pady=2)
+
+        self.local_cam_title = ctk.CTkLabel(
+            self.local_cam_card,
+            text="Local Camera (You - Person A)",
+            font=ctk.CTkFont(family="Arial", size=11, weight="bold"),
+            text_color=PALETTE["text_secondary"],
+        )
+        # Note: local_cam_title is hidden in single camera mode, shown when dual camera activates
+
         self.video_label = ctk.CTkLabel(
-            self.left_col,
+            self.local_cam_card,
             text="Camera is currently idle.\n\nClick 'Start Camera' below to start live prediction.",
-            fg_color=PALETTE["video_bg"],
-            corner_radius=8,
+            fg_color="transparent",
             font=ctk.CTkFont(family="Arial", size=14),
             text_color=PALETTE["text_secondary"],
         )
-        self.video_label.pack(fill="both", expand=True, padx=14, pady=6)
+        self.video_label.pack(fill="both", expand=True, padx=4, pady=4)
+
+        # 2. Remote Camera (Friend in room) - Hidden by default for single camera demo to Sir
+        self.remote_cam_card = ctk.CTkFrame(self.video_container, fg_color=PALETTE["video_bg"], corner_radius=8)
+        self.remote_cam_title = ctk.CTkLabel(
+            self.remote_cam_card,
+            text="Remote Camera (Friend - Person B)",
+            font=ctk.CTkFont(family="Arial", size=11, weight="bold"),
+            text_color=PALETTE["accent_blue"],
+        )
+        self.remote_cam_title.pack(anchor="nw", padx=8, pady=(4, 0))
+
+        self.remote_video_label = ctk.CTkLabel(
+            self.remote_cam_card,
+            text="Waiting for friend's camera stream...",
+            fg_color="transparent",
+            font=ctk.CTkFont(family="Arial", size=12),
+            text_color=PALETTE["text_secondary"],
+        )
+        self.remote_video_label.pack(fill="both", expand=True, padx=4, pady=4)
+        # self.remote_cam_card starts hidden for single camera mode!
+        self.remote_cam_card.pack_forget()
 
         # Camera Controls
         cam_controls = ctk.CTkFrame(self.left_col, height=50, fg_color="transparent")
@@ -770,6 +807,17 @@ class SignLanguageApp(ctk.CTk):
                     self.last_commit_time = curr_t
                     self.after(0, self._on_stable_sign_emitted, dominant_sign)
 
+            # Stream video frame to room members every 4 frames (~7 FPS)
+            self._stream_counter = getattr(self, "_stream_counter", 0) + 1
+            if self.chat_client.is_connected and (self._stream_counter % 4 == 0):
+                try:
+                    small = cv2.resize(display_frame, (320, 180))
+                    _, buf = cv2.imencode(".jpg", small, [int(cv2.IMWRITE_JPEG_QUALITY), 45])
+                    b64_str = base64.b64encode(buf).decode("ascii")
+                    self.chat_client.send_video_frame(b64_str)
+                except Exception:
+                    pass
+
             # Prepare Tkinter image
             h, w = display_frame.shape[:2]
             target_w = 640
@@ -838,6 +886,13 @@ class SignLanguageApp(ctk.CTk):
         if word:
             self.entry_composed_text.delete(0, "end")
             self.entry_composed_text.insert(0, self.text_buffer.text)
+
+            # AUTO-SEND: Immediately send detected sign directly into the chat room
+            if self.chat_client.is_connected:
+                self.chat_client.send_message(word)
+            else:
+                t_str = time.strftime("%H:%M:%S")
+                self._append_chat(f"[{t_str}] {self.entry_user.get()} (Auto-Sign): {word}\n")
 
     def _on_toggle_landmarks(self) -> None:
         self.show_landmarks = bool(self.switch_landmarks.get())
@@ -1009,6 +1064,20 @@ class SignLanguageApp(ctk.CTk):
                     text=f"● {message}",
                     text_color=PALETTE["success_green"],
                 )
+
+                # DUAL CAMERA: If 2 or more people in room, open friend's camera panel!
+                # If only 1 person (you), collapse to single camera window to demonstrate to Sir!
+                if count >= 2:
+                    if not getattr(self, "is_dual_cam_active", False):
+                        self.is_dual_cam_active = True
+                        self.local_cam_title.pack(anchor="nw", padx=8, pady=(4, 0), before=self.video_label)
+                        self.remote_cam_card.pack(fill="both", expand=True, pady=4)
+                        self.remote_cam_title.configure(text=f"Remote Camera ({count} people in room)")
+                else:
+                    if getattr(self, "is_dual_cam_active", False):
+                        self.is_dual_cam_active = False
+                        self.remote_cam_card.pack_forget()
+                        self.local_cam_title.pack_forget()
             else:
                 self.btn_chat_connect.configure(
                     text="Connect",
@@ -1020,7 +1089,28 @@ class SignLanguageApp(ctk.CTk):
                     text=f"○ {message}",
                     text_color=PALETTE["text_secondary"],
                 )
+                if getattr(self, "is_dual_cam_active", False):
+                    self.is_dual_cam_active = False
+                    self.remote_cam_card.pack_forget()
+                    self.local_cam_title.pack_forget()
         self.after(0, update)
+
+    def _on_remote_video_frame(self, sender: str, b64_str: str) -> None:
+        """Decode incoming remote video frame from friend and display in remote video panel."""
+        try:
+            img_bytes = base64.b64decode(b64_str)
+            np_arr = np.frombuffer(img_bytes, np.uint8)
+            frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            if frame is not None:
+                h, w = frame.shape[:2]
+                target_w = 480
+                target_h = int(h * (target_w / w))
+                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                pil_img = Image.fromarray(rgb).resize((target_w, target_h), Image.Resampling.BILINEAR)
+                ctk_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(target_w, target_h))
+                self.after(0, lambda: self.remote_video_label.configure(image=ctk_img, text=""))
+        except Exception:
+            pass
 
     def _on_chat_message(self, sender: str, text: str, timestamp: str, is_system: bool) -> None:
         def update():
@@ -1056,11 +1146,10 @@ class SignLanguageApp(ctk.CTk):
     # Model Training & Dataset Status Actions
     # ========================================================
     def _update_model_badge(self) -> None:
-        if self.classifier.is_loaded and self.classifier.accuracy is not None:
-            acc_str = f"{self.classifier.accuracy * 100:.1f}%"
+        if self.classifier.is_loaded:
             n_classes = len(self.classifier.classes)
             self.model_status_label.configure(
-                text=f"● Random Forest ({n_classes} Signs | Test Acc: {acc_str})",
+                text=f"● Model Active ({n_classes} Signs Ready)",
                 text_color=PALETTE["success_green"],
             )
         else:
@@ -1088,15 +1177,14 @@ class SignLanguageApp(ctk.CTk):
         self._update_model_badge()
         self._append_chat(
             f"[{time.strftime('%H:%M:%S')}] SYSTEM: Model trained successfully! "
-            f"Classes: {res['n_classes']}, Test Accuracy: {res['accuracy_pct']:.2f}%\n"
+            f"Classes: {res['n_classes']} Active\n"
         )
         self._show_info_dialog(
             "Training Successful",
             f"Random Forest Model Trained!\n\n"
-            f"• Classes: {res['n_classes']}\n"
+            f"• Classes: {res['n_classes']} Signs Ready\n"
             f"• Training Samples: {res['train_samples']}\n"
-            f"• Testing Samples: {res['test_samples']}\n"
-            f"• Real Test Accuracy: {res['accuracy_pct']:.2f}%\n\n"
+            f"• Testing Samples: {res['test_samples']}\n\n"
             f"Model saved to: models/v1/random_forest.joblib",
         )
 
