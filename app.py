@@ -44,9 +44,9 @@ ctk.set_appearance_mode("Light")
 ctk.set_default_color_theme("blue")
 
 PALETTE = {
-    "bg_main": "#F0F4F2",          # Soft sage-cream background (CoachPro / Crextio aesthetic)
+    "bg_main": "#E4EAE6",          # Calmer, slightly deeper soft sage background
     "card_bg": "#FFFFFF",          # Translucent soft white card surface
-    "card_border": "#E2E8E5",      # Subtle 1px border
+    "card_border": "#D5DFD9",      # Subtle 1px border
     "text_primary": "#14231F",     # Dark green-charcoal for headings & values
     "text_secondary": "#5A6E67",   # Muted grey-green for labels & chips
     "text_muted": "#859891",       # Soft subtle grey-green
@@ -55,15 +55,23 @@ PALETTE = {
     "accent_yellow": "#F6D860",    # Soft yellow highlight
     "accent_blue": "#0F766E",      # Backward-compatible alias
     "accent_hover": "#0D5C56",     # Backward-compatible alias
-    "btn_secondary": "#F0F4F2",    # Soft secondary pill button
-    "btn_secondary_hover": "#E4EAE6",
+    "btn_secondary": "#EAEFEA",    # Soft secondary pill button
+    "btn_secondary_hover": "#DCE3DC",
     "success_green": "#10B981",    # Emerald for live/connected states
     "success_hover": "#059669",
     "warning_amber": "#D97706",    # Muted amber
     "danger_red": "#E11D48",       # Rose danger
     "danger_hover": "#BE123C",
     "video_bg": "#14231F",         # Dark green-charcoal video viewport clipped to rounded corners
-    "input_bg": "#F7FAF8",         # Soft light input field
+    "input_bg": "#F4F7F5",         # Soft light input field
+    # Dark Chat Box Theme
+    "chat_bg": "#111822",          # Dark background for chat transcript
+    "chat_border": "#1E293B",      # Dark border for chat transcript
+    "chat_text": "#F8FAFC",        # Light text for chat messages
+    "chat_input_bg": "#182230",    # Dark input field
+    "chat_input_border": "#283548",# Dark input outline
+    "chat_btn_clear": "#1F2B3B",   # Dark clear button
+    "chat_btn_clear_hover": "#2B3A4F",
 }
 
 SIGN_INFO: dict[str, str] = {
@@ -472,19 +480,6 @@ class SignLanguageApp(ctk.CTk):
         comp_btn_row = ctk.CTkFrame(self.card_composer, fg_color="transparent")
         comp_btn_row.pack(fill="x", padx=20, pady=(2, 12))
 
-        self.btn_send_sign = ctk.CTkButton(
-            comp_btn_row,
-            text="Send to Chat",
-            command=self._send_composed_to_chat,
-            fg_color=PALETTE["accent_teal"],
-            hover_color=PALETTE["accent_teal_hover"],
-            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
-            corner_radius=9999,
-            height=30,
-            width=105,
-        )
-        self.btn_send_sign.pack(side="left", padx=(0, 6))
-
         self.btn_backspace = ctk.CTkButton(
             comp_btn_row,
             text="Backspace",
@@ -497,7 +492,7 @@ class SignLanguageApp(ctk.CTk):
             height=30,
             width=85,
         )
-        self.btn_backspace.pack(side="left", padx=4)
+        self.btn_backspace.pack(side="left", padx=(0, 6))
 
         self.btn_clear_comp = ctk.CTkButton(
             comp_btn_row,
@@ -713,11 +708,11 @@ class SignLanguageApp(ctk.CTk):
         self.chat_textbox = ctk.CTkTextbox(
             self.card_chat,
             font=ctk.CTkFont(family="Segoe UI", size=12),
-            fg_color=PALETTE["input_bg"],
-            border_color=PALETTE["card_border"],
+            fg_color=PALETTE["chat_bg"],
+            border_color=PALETTE["chat_border"],
             border_width=1,
             corner_radius=16,
-            text_color=PALETTE["text_primary"],
+            text_color=PALETTE["chat_text"],
         )
         self.chat_textbox.pack(fill="both", expand=True, padx=20, pady=4)
         self.chat_textbox.insert(
@@ -735,10 +730,12 @@ class SignLanguageApp(ctk.CTk):
             chat_footer,
             font=ctk.CTkFont(family="Segoe UI", size=12),
             placeholder_text="Type a message...",
+            placeholder_text_color="#94A3B8",
             height=34,
             corner_radius=9999,
-            fg_color=PALETTE["input_bg"],
-            border_color=PALETTE["card_border"],
+            fg_color=PALETTE["chat_input_bg"],
+            border_color=PALETTE["chat_input_border"],
+            text_color=PALETTE["chat_text"],
         )
         self.entry_manual_msg.pack(side="left", fill="x", expand=True, padx=(0, 8))
         self.entry_manual_msg.bind("<Return>", lambda _: self._send_manual_message())
@@ -760,10 +757,10 @@ class SignLanguageApp(ctk.CTk):
             chat_footer,
             text="Clear",
             command=self._clear_chat_textbox,
-            fg_color=PALETTE["btn_secondary"],
-            hover_color=PALETTE["btn_secondary_hover"],
+            fg_color=PALETTE["chat_btn_clear"],
+            hover_color=PALETTE["chat_btn_clear_hover"],
             font=ctk.CTkFont(family="Segoe UI", size=11),
-            text_color=PALETTE["text_primary"],
+            text_color="#E2E8F0",
             corner_radius=9999,
             width=58,
             height=34,

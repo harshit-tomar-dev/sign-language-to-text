@@ -265,12 +265,12 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
     }
     #chat-card {
       flex: 1;
-      background: var(--card-bg);
+      background: #111822;
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
-      border: 1px solid var(--card-border);
+      border: 1px solid #1E293B;
       border-radius: var(--radius-card);
-      box-shadow: var(--card-shadow);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -282,6 +282,7 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
       display: flex;
       flex-direction: column;
       gap: 12px;
+      background: #111822;
     }
     .msg-row {
       display: flex;
@@ -297,7 +298,7 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
     .msg-row.outgoing { align-self: flex-end; align-items: flex-end; }
     .msg-meta {
       font-size: 11px;
-      color: var(--text-subtle);
+      color: #94A3B8;
       margin-bottom: 3px;
       display: flex;
       align-items: center;
@@ -310,17 +311,17 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
       word-break: break-word;
     }
     .msg-row.incoming .msg-bubble {
-      background: rgba(255, 255, 255, 0.95);
-      color: var(--text-heading);
-      border: 1px solid var(--card-border-subtle);
+      background: #182230;
+      color: #F8FAFC;
+      border: 1px solid #283548;
       border-radius: 18px 18px 18px 4px;
-      box-shadow: 0 4px 14px rgba(20, 35, 31, 0.03);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
     }
     .msg-row.outgoing .msg-bubble {
       background: var(--teal-primary);
       color: #FFFFFF;
       border-radius: 18px 18px 4px 18px;
-      box-shadow: 0 6px 18px rgba(15, 118, 110, 0.22);
+      box-shadow: 0 6px 18px rgba(15, 118, 110, 0.35);
     }
     .sign-badge {
       display: inline-flex;
@@ -330,23 +331,23 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
       font-weight: 600;
       padding: 2px 8px;
       border-radius: var(--radius-pill);
-      background: var(--teal-surface);
-      color: var(--teal-primary);
+      background: rgba(15, 118, 110, 0.25);
+      color: #5EEAD4;
       margin-right: 6px;
     }
     .msg-system {
       align-self: center;
-      background: rgba(255, 255, 255, 0.8);
-      border: 1px solid var(--card-border-subtle);
-      color: var(--text-muted);
+      background: #1E293B;
+      border: 1px solid #334155;
+      color: #94A3B8;
       padding: 4px 16px;
       border-radius: var(--radius-pill);
       font-size: 11px;
       font-weight: 500;
     }
     footer {
-      background: rgba(255, 255, 255, 0.7);
-      border-top: 1px solid var(--card-border-subtle);
+      background: #0E141D;
+      border-top: 1px solid #1E293B;
       padding: 14px 20px;
       display: flex;
       gap: 12px;
@@ -354,20 +355,23 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
     }
     footer input {
       flex: 1;
-      background: #FFFFFF;
-      border: 1px solid var(--card-border-subtle);
-      color: var(--text-heading);
+      background: #182230;
+      border: 1px solid #283548;
+      color: #F8FAFC;
       padding: 12px 20px;
       border-radius: var(--radius-pill);
       font-size: 14px;
       font-family: inherit;
       outline: none;
-      box-shadow: 0 2px 8px rgba(20, 35, 31, 0.02);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
+    footer input::placeholder {
+      color: #64748B;
+    }
     footer input:focus {
-      border-color: var(--teal-primary);
-      box-shadow: 0 0 0 3px var(--teal-subtle);
+      border-color: #14B8A6;
+      box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2);
     }
     footer button {
       background: var(--teal-primary);
