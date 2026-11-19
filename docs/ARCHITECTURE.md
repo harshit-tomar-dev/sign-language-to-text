@@ -10,7 +10,7 @@ Real-Time Sign Language to Text Conversion System Using Machine Learning
 | Project version | `0.1.0-alpha` (from `config.yaml` → `project.version`) |
 | Document status | Implementation Complete — Demonstration Ready |
 | Implementation status | **Fully Implemented and Verified (57/57 Unit Tests Passing • 94.00% Test Accuracy)** |
-| Owner | Harshit Tomar, Bhavishya Tyagi, Shivank Tyagi |
+| Owner | Harshit Tomar, Bhavishya Tyagi |
 | Institution | SRM Institute of Science and Technology |
 | Course | Machine Learning (B.Tech CSE) |
 | Last updated | 2026-10-25 |

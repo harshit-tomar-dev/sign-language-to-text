@@ -24,7 +24,6 @@ This is the **only** place the team roster is recorded. It is deliberately kept 
 |---|---|---|
 | Harshit Tomar | RA2411003030026 | ML pipeline, feature engineering, training and evaluation |
 | Bhavishya Tyagi | RA2411003030003 | Dataset collection tooling, preprocessing, data quality |
-| Shivank Tyagi | RA2411003030025 | User interface, testing, documentation upkeep |
 
 Ownership is **proposed, not final** — to be confirmed at the start of Phase 1. All three members
 must be able to explain the whole system in the viva, so ownership means "responsible for it working",
@@ -594,7 +593,7 @@ adding a feature set and a predictor, not rewriting the application.
 
 | ID | Question | Owner | Resolve by |
 |---|---|---|---|
-| OQ-01 | Citable source for deaf population / interpreter scarcity figures | Shivank | Phase 14 |
+| OQ-01 | Citable source for deaf population / interpreter scarcity figures | Bhavishya | Phase 14 |
 | OQ-02 | Do the pinned dependency versions actually install on the team's machines? | Bhavishya | Phase 1 |
 | OQ-03 | Optimal `min_detection_confidence` / `min_tracking_confidence` | Bhavishya | Phase 2 |
 | OQ-04 | Confirm empirically that detecting before flipping yields correct handedness labels | Bhavishya | Phase 2 |

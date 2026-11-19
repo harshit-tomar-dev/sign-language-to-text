@@ -407,7 +407,7 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
       </div>
       <div class="header-title">
         <h1>SignFlow</h1>
-        <span>SRM Institute of Science and Technology · Harshit Tomar (RA2411003030026) · Bhavishya · Shivank</span>
+        <span>SRM Institute of Science and Technology · Harshit Tomar (RA2411003030026) · Bhavishya Tyagi</span>
       </div>
     </div>
   </header>

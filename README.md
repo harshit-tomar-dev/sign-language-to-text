@@ -21,7 +21,6 @@ Built for **SRM Institute of Science and Technology** (B.Tech Computer Science a
 - **Team Members:**
   - Harshit Tomar (RA2411003030026)
   - Bhavishya Tyagi (RA2411003030003)
-  - Shivank Tyagi (RA2411003030025)
 
 ---
 

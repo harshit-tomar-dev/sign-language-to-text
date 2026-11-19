@@ -1,7 +1,7 @@
 """Real-Time Sign Language to Text Conversion System
 Desktop Application (CustomTkinter + OpenCV + MediaPipe + Random Forest + Real-Time Chat)
 
-Author: Harshit Tomar (RA2411003030026), Bhavishya Tyagi (RA2411003030003), Shivank Tyagi (RA2411003030025)
+Author: Harshit Tomar (RA2411003030026), Bhavishya Tyagi (RA2411003030003)
 Institution: SRM Institute of Science and Technology
 """
 
@@ -203,7 +203,7 @@ class SignLanguageApp(ctk.CTk):
 
         sub_lbl = ctk.CTkLabel(
             header_text_box,
-            text="SRM Institute of Science and Technology · Harshit Tomar (RA2411003030026) · Bhavishya · Shivank",
+            text="SRM Institute of Science and Technology · Harshit Tomar (RA2411003030026) · Bhavishya Tyagi",
             font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=PALETTE["text_secondary"],
         )
