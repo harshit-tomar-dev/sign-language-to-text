@@ -215,6 +215,7 @@ class ModelTrainer:
             n_estimators=n_estimators,
             random_state=random_state,
             class_weight="balanced",
+            max_features=0.5,
             n_jobs=-1,
         )
         eval_rf.fit(X_train, y_train)
@@ -228,6 +229,7 @@ class ModelTrainer:
             n_estimators=n_estimators,
             random_state=random_state,
             class_weight="balanced",
+            max_features=0.5,
             n_jobs=-1,
         )
         prod_rf.fit(X, y)
