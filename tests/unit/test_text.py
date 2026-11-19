@@ -12,6 +12,8 @@ def test_sign_to_word_mapping():
     assert sign_to_word("NO") == "No"
     assert sign_to_word("SORRY") == "Sorry"
     assert sign_to_word("HELP") == "Help"
+    assert sign_to_word("NAME") == "My name is"
+    assert sign_to_word("MY_NAME_IS") == "My name is Harshit."
     assert sign_to_word("I_LOVE_YOU") == "I love you"
     assert sign_to_word("_NEUTRAL") == ""
     assert sign_to_word("UNCERTAIN") == ""

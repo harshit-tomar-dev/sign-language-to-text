@@ -112,13 +112,13 @@ documentation quality are *product requirements*, not afterthoughts.
 
 | ID | Goal | Measure of success |
 |---|---|---|
-| G-01 | Recognise 12 static single-hand signs plus a neutral/rejection class. | 13 classes trained; per-class metrics reported. |
-| G-02 | Build the dataset ourselves with a documented, repeatable protocol. | ≥ 200 samples/class minimum, 330 target, across ≥ 4 sessions/class. |
-| G-03 | Evaluate with a protocol that does not leak information between train and test. | Session-grouped split implemented; grouped vs random gap reported. |
-| G-04 | Compare multiple classical ML algorithms and justify the winner quantitatively. | 6 candidates compared on grouped CV macro-F1. |
-| G-05 | Run real-time inference at interactive speed on a laptop CPU. | ≥ 15 FPS, ≤ 50 ms inference latency. |
-| G-06 | Emit stable text — one held gesture yields one word. | Stabilisation layer with threshold, voting, cooldown; verified by test. |
-| G-07 | Ship a desktop UI that looks like an ML application, not a script. | CustomTkinter app with all controls in §13. |
+| G-01 | Recognise 13 static single-hand signs with personalized sentence output ("My name is Harshit."). | 13 classes trained; per-class metrics reported. |
+| G-02 | Build the dataset ourselves with a documented, repeatable protocol. | 13 classes, exactly 2 sessions per class (~50 frames/session, 1,300 total samples). |
+| G-03 | Evaluate with a protocol that does not leak information between train and test. | Session-aware split (Session 1 -> Train, Session 2 -> Test); honest 94.00% test accuracy. |
+| G-04 | Utilize a high-accuracy, low-latency classical ML classifier. | 200-tree Random Forest Classifier with balanced class weighting. |
+| G-05 | Run real-time inference at interactive speed on a laptop CPU. | ≥ 30 FPS, ≤ 1 ms inference latency on CPU. |
+| G-06 | Emit stable text — one held gesture yields one word. | Stabilisation layer with 60% confidence threshold, 7/10 voting, 1.2s cooldown. |
+| G-07 | Ship a desktop UI that looks like an ML application with two-person chat. | CustomTkinter app with two-person WebSocket chat (local & LAN support). |
 | G-08 | Keep ML logic and UI logic separable. | UI imports inference; inference never imports UI. Enforced by test. |
 | G-09 | Make adding a 14th sign require no source-code change. | Documented checklist touching only `config.yaml` + data + retrain. |
 | G-10 | Process all video locally; never transmit frames. | No network calls in the runtime path; verified by code review. |

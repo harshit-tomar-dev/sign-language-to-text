@@ -69,18 +69,12 @@ camera:
 # Hand detection (MediaPipe Hands)
 # ------------------------------------------------------------------------------
 hand_detection:
-  # Set to 2, NOT 1, deliberately. V1's vocabulary is single-hand, but if we asked
-  # MediaPipe for only one hand we could never DETECT that the user has two hands in
-  # frame — the "multiple hands detected" warning required by the PRD would be
-  # unreachable code. So we detect up to 2 and then select one via multi_hand_policy.
-  max_num_hands: 2
+  # Set to 1 for single-hand static sign language vocabulary.
+  max_num_hands: 1
   min_detection_confidence: 0.7         # [TUNE:Phase-2]
   min_tracking_confidence: 0.5          # [TUNE:Phase-2]
   model_complexity: 0                   # 0 = lite/fast, 1 = full/accurate [TUNE:Phase-13]
   static_image_mode: false              # false = video mode, enables tracking
-  # When 2 hands are visible we keep exactly ONE and raise a user-facing warning.
-  # highest_confidence | largest | reject   (reject = emit nothing; strictest, safest)
-  # See ARCHITECTURE.md §Error Handling.
   multi_hand_policy: "highest_confidence"
 
 # ------------------------------------------------------------------------------
@@ -134,31 +128,24 @@ dataset:
     - "HELLO"         # open palm, 5 fingers spread, palm to camera
     - "THANK_YOU"     # flat palm, fingers together, palm to camera, fingers up
     - "PLEASE"        # flat palm, fingers together, palm rotated to face upward
-    - "YES"           # closed fist, thumb extended UP        <- MUST be quoted
-    - "NO"            # closed fist, thumb extended DOWN      <- MUST be quoted
+    - "YES"           # closed fist, thumb extended UP
+    - "NO"            # closed fist, thumb extended DOWN
     - "SORRY"         # closed fist, thumb tucked, knuckles to camera
     - "HELP"          # thumb up + index sideways (L shape)
-    - "NAME"          # index + middle extended and held TOGETHER
     - "WATER"         # index + middle + ring extended and SPREAD (W shape)
     - "EAT"           # all fingertips curled toward thumb (claw / pinch)
     - "I_LOVE_YOU"    # thumb + index + pinky extended, middle + ring folded
     - "YOU"           # index finger only, extended
-    - "_NEUTRAL"      # relaxed / idle hand — produces NO text output
+    - "NAME"          # index + middle extended and held TOGETHER
+    - "MY_NAME_IS"    # hand across chest / heart gesture (output: "My name is Harshit.")
 
-  neutral_class: "_NEUTRAL"     # [IMPORTANT] rejection class. Without it the model is
-                                # forced to label a resting hand as some real sign.
+  neutral_class: ""             # Neutral state is gated by hand detector and confidence
 
-  # --- Collection targets ---
-  samples_per_class_target: 330   # [TUNE:Phase-3] ~6 sessions x ~55 samples
-  samples_per_class_minimum: 200  # below this, training script REFUSES to run
-  sessions_per_class_minimum: 4   # [CRITICAL] multi-session is what makes the
-                                  # group-aware split meaningful. See §Leakage below.
-  # CONSTRAINT that must hold:
-  #   sessions_per_class_minimum * samples_per_session_cap >= samples_per_class_target
-  #   4 * 90 = 360 >= 330  ✓
-  # At a cap of 80 this gives 320, and the 330 target would be UNREACHABLE for a team
-  # that collects only the minimum number of sessions. Validated at startup.
-  samples_per_session_cap: 90     # prevents one session dominating a class
+  # --- Collection targets (2 sessions per class, ~50 samples per session) ---
+  samples_per_class_target: 100   # 2 sessions x ~50 samples
+  samples_per_class_minimum: 40   # minimum valid samples across 2 sessions
+  sessions_per_class_minimum: 2   # exactly 2 recording sessions per class
+  samples_per_session_cap: 80     # cap per recording session
 
   capture_fps: 8                  # [TUNE:Phase-3] deliberately LOW. Capturing at 30 fps
                                   # while holding a pose yields near-duplicate frames,
@@ -284,7 +271,7 @@ model:
 # Real-time inference & prediction stabilisation
 # ------------------------------------------------------------------------------
 inference:
-  confidence_threshold: 0.80    # [TUNE:Phase-9] below this → show "uncertain", emit nothing
+  confidence_threshold: 0.60    # below this → show "UNCERTAIN", emit nothing
 
   stabilisation:
     # Prevents "HELLO HELLO HELLO HELLO" from one held gesture.

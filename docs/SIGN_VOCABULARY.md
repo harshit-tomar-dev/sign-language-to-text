@@ -651,19 +651,19 @@ Unlike the other 11 classes where variation should be natural but controlled, **
 
 | # | Label | Meaning | Key feature | Static pose? | Confusion with |
 |---|---|---|---|---|---|
-| 1 | `HELLO` | Greeting | 5 fingers spread, palm toward camera | ✅ | THANK_YOU |
-| 2 | `THANK_YOU` | Gratitude | Flat hand together, palm toward camera | ✅ | HELLO, PLEASE |
-| 3 | `PLEASE` | Request | Flat hand together, palm upward | ✅ | THANK_YOU |
-| 4 | `YES` | Affirmation | Fist + thumb up | ✅ | NO, SORRY |
-| 5 | `NO` | Negation | Fist + thumb down | ✅ | YES, SORRY |
-| 6 | `SORRY` | Apology | Fist, thumb tucked, knuckles toward camera | ✅ | YES, NO |
-| 7 | `HELP` | Assistance | L-shape (thumb up + index sideways) | ✅ | YOU, I_LOVE_YOU |
-| 8 | `NAME` | Name | 2 fingers (index+middle) together, upright | ✅ | WATER |
-| 9 | `WATER` | Water | 3 fingers (index+middle+ring) spread (W) | ✅ | NAME |
-| 10 | `EAT` | Eating | All fingertips pinched toward thumb | ✅ | (minimal) |
-| 11 | `I_LOVE_YOU` | Love | Thumb + index + pinky extended | ✅ | HELP, YOU |
-| 12 | `YOU` | You (pointing) | Index only, extended | ✅ | HELP, I_LOVE_YOU |
-| 13 | `_NEUTRAL` | No sign / idle | Any non-sign hand state | N/A | All 12 signs |
+| 1 | `HELLO` | Greeting | 5 fingers spread, palm toward camera | "Hello" | THANK_YOU |
+| 2 | `THANK_YOU` | Gratitude | Flat hand together, palm toward camera | "Thank you" | HELLO, PLEASE |
+| 3 | `PLEASE` | Request | Flat hand together, palm upward | "Please" | THANK_YOU |
+| 4 | `YES` | Affirmation | Fist + thumb up | "Yes" | NO, SORRY |
+| 5 | `NO` | Negation | Fist + thumb down | "No" | YES, SORRY |
+| 6 | `SORRY` | Apology | Fist, thumb tucked, knuckles toward camera | "Sorry" | YES, NO |
+| 7 | `HELP` | Assistance | L-shape (thumb up + index sideways) | "Help" | YOU, I_LOVE_YOU |
+| 8 | `WATER` | Water | 3 fingers (index+middle+ring) spread (W) | "Water" | NAME |
+| 9 | `EAT` | Eating | All fingertips pinched toward thumb | "Eat" | (minimal) |
+| 10 | `I_LOVE_YOU` | Love | Thumb + index + pinky extended | "I love you" | HELP, YOU |
+| 11 | `YOU` | You (pointing) | Index only, extended | "You" | HELP, I_LOVE_YOU |
+| 12 | `NAME` | Name | 2 fingers (index+middle) together, upright | "My name is" | WATER |
+| 13 | `MY_NAME_IS` | Personal Introduction | Open/cupped hand placed against heart/chest | "My name is Harshit." | PLEASE, THANK_YOU |
 
 ---
 

@@ -144,7 +144,7 @@ def load_config(path: Path | str | None = None) -> AppConfig:
         )
         dataset = DatasetConfig(
             classes=[str(c) for c in ds_dict["classes"]],
-            neutral_class=str(ds_dict["neutral_class"]),
+            neutral_class=str(ds_dict.get("neutral_class") or ""),
             samples_per_class_target=int(ds_dict["samples_per_class_target"]),
             samples_per_class_minimum=int(ds_dict["samples_per_class_minimum"]),
             sessions_per_class_minimum=int(ds_dict["sessions_per_class_minimum"]),

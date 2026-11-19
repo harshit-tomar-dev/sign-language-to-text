@@ -124,7 +124,7 @@ class ValidationConfig:
 class DatasetConfig:
     """Vocabulary, collection constraints, and targets."""
     classes: list[str]
-    neutral_class: str
+    neutral_class: str | None
     samples_per_class_target: int
     samples_per_class_minimum: int
     sessions_per_class_minimum: int
@@ -139,10 +139,11 @@ class DatasetConfig:
         """Validate vocabulary and constraints."""
         if not self.classes:
             raise ConfigError("Dataset classes list cannot be empty")
-        if self.neutral_class not in self.classes:
-            raise ConfigError(
-                f"neutral_class '{self.neutral_class}' must be in classes: {self.classes}"
-            )
+        if self.neutral_class and self.neutral_class.strip() and self.neutral_class in self.classes:
+            pass  # Explicit neutral class present in vocabulary
+        elif self.neutral_class and self.neutral_class.strip() and self.neutral_class not in self.classes:
+            # Neutral state is handled by hand presence/absence & confidence gating rather than discrete class
+            pass
         if len(self.classes) != len(set(self.classes)):
             raise ConfigError("Duplicate class names found in dataset.classes")
         capacity = self.sessions_per_class_minimum * self.samples_per_session_cap

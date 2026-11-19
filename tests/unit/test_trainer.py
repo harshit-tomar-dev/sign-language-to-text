@@ -98,3 +98,12 @@ def test_training_fails_with_single_class(dummy_dataset_dir):
         trainer = ModelTrainer(features_dir=feat_dir, model_dir=Path(single_tmp))
         with pytest.raises(ValueError, match="requires at least 2 distinct classes"):
             trainer.train()
+
+
+def test_validate_dataset_sessions(dummy_dataset_dir):
+    trainer = ModelTrainer(features_dir=dummy_dataset_dir)
+    report = trainer.validate_dataset(target_classes=["HELLO", "YES", "NO"], min_sessions=2)
+    assert report["is_ready"] is True
+    assert len(report["classes"]) == 3
+    assert report["classes"]["HELLO"]["sessions_count"] == 2
+    assert report["missing_classes"] == []
