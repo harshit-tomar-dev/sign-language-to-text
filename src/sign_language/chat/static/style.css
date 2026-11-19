@@ -1,0 +1,544 @@
+/* ==========================================================================
+   SignFlow — Soft Glass Theme
+   Design Studio aesthetic inspired by CoachPro, Leafora, and Crextio
+   ========================================================================== */
+
+:root {
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  
+  /* Gradients & Background */
+  --bg-sage: #E8F1EC;
+  --bg-cream: #F6F8F3;
+  --bg-lavender: #F1EEF5;
+  --bg-gradient: linear-gradient(135deg, var(--bg-sage) 0%, var(--bg-cream) 45%, var(--bg-lavender) 100%);
+  
+  /* Primary & Highlight Accents */
+  --teal-primary: #0F766E;
+  --teal-hover: #0D5C56;
+  --teal-subtle: rgba(15, 118, 110, 0.08);
+  --teal-surface: #E6F3F1;
+  --accent-yellow: #F6D860;
+  
+  /* Card Surfaces & Glassmorphism */
+  --card-bg: rgba(255, 255, 255, 0.68);
+  --card-bg-solid: #FFFFFF;
+  --card-border: rgba(255, 255, 255, 0.85);
+  --card-border-subtle: rgba(20, 35, 31, 0.07);
+  --card-shadow: 0 16px 40px rgba(20, 35, 31, 0.05), 0 2px 6px rgba(20, 35, 31, 0.02);
+  --card-shadow-hover: 0 20px 48px rgba(20, 35, 31, 0.08);
+  
+  /* Radii */
+  --radius-card: 24px;
+  --radius-inner: 16px;
+  --radius-pill: 9999px;
+  
+  /* Typography Colors */
+  --text-heading: #14231F;
+  --text-body: #2C3E38;
+  --text-muted: #5A6E67;
+  --text-subtle: #859891;
+  
+  /* Status Colors */
+  --status-connected: #10B981;
+  --status-disconnected: #94A3B8;
+  --status-warning: #D97706;
+  
+  /* Spacing Grid (8px baseline) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+  color: var(--text-body);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ==========================================================================
+   Header Bar
+   ========================================================================== */
+header {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--card-border-subtle);
+  padding: 16px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-inner);
+  background: var(--teal-surface);
+  color: var(--teal-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brand-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
+.header-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-title h1 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text-heading);
+  line-height: 1.2;
+}
+
+.header-title span {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* Header right: completely clean (no badge) */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ==========================================================================
+   Main Content Layout
+   ========================================================================== */
+.main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) var(--space-6) var(--space-5);
+  gap: var(--space-4);
+  overflow: hidden;
+}
+
+/* Collapsible Connection Drawer */
+.connection-drawer {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-inner);
+  box-shadow: 0 4px 16px rgba(20, 35, 31, 0.03);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.connection-drawer summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.connection-drawer summary::-webkit-details-marker {
+  display: none;
+}
+
+.connection-drawer summary:hover {
+  color: var(--text-heading);
+}
+
+.conn-summary-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.conn-summary-left svg {
+  width: 14px;
+  height: 14px;
+}
+
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--status-disconnected);
+  transition: background 0.2s ease;
+}
+
+.status-indicator.connected .status-dot {
+  background: var(--status-connected);
+}
+
+.status-indicator.connected {
+  color: var(--teal-primary);
+  font-weight: 600;
+}
+
+.conn-fields {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 4px 18px 14px;
+}
+
+.input-pill {
+  background: var(--card-bg-solid);
+  border: 1px solid var(--card-border-subtle);
+  color: var(--text-heading);
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input-pill:focus {
+  border-color: var(--teal-primary);
+  box-shadow: 0 0 0 3px var(--teal-subtle);
+}
+
+.btn-pill {
+  background: var(--teal-primary);
+  color: #FFFFFF;
+  border: none;
+  padding: 7px 18px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-pill:hover {
+  background: var(--teal-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2);
+}
+
+.btn-pill:active {
+  transform: translateY(0);
+}
+
+.btn-pill.secondary {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-heading);
+  border: 1px solid var(--card-border-subtle);
+}
+
+.btn-pill.secondary:hover {
+  background: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(20, 35, 31, 0.06);
+}
+
+/* ==========================================================================
+   Video Cards Grid (Clean Rounded Glass)
+   ========================================================================== */
+#video-grid {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.video-card {
+  position: relative;
+  width: 340px;
+  height: 200px;
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.video-card:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+.video-card video,
+.video-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-card);
+}
+
+.video-placeholder {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.video-chip {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-heading);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 2px 8px rgba(20, 35, 31, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.video-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--teal-primary);
+}
+
+/* ==========================================================================
+   Chat Container & Message Bubbles
+   ========================================================================== */
+#chat-card {
+  flex: 1;
+  background: var(--card-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#chat-container {
+  flex: 1;
+  padding: var(--space-5);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.msg-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 72%;
+  animation: fadeIn 0.18s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.msg-row.incoming {
+  align-self: flex-start;
+}
+
+.msg-row.outgoing {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.msg-meta {
+  font-size: 11px;
+  color: var(--text-subtle);
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.msg-bubble {
+  padding: 10px 16px;
+  font-size: 14px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.msg-row.incoming .msg-bubble {
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text-heading);
+  border: 1px solid var(--card-border-subtle);
+  border-radius: 18px 18px 18px 4px;
+  box-shadow: 0 4px 14px rgba(20, 35, 31, 0.03);
+}
+
+.msg-row.outgoing .msg-bubble {
+  background: var(--teal-primary);
+  color: #FFFFFF;
+  border-radius: 18px 18px 4px 18px;
+  box-shadow: 0 6px 18px rgba(15, 118, 110, 0.22);
+}
+
+.sign-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--teal-surface);
+  color: var(--teal-primary);
+  margin-right: 6px;
+}
+
+.sign-badge svg {
+  width: 11px;
+  height: 11px;
+}
+
+.msg-system {
+  align-self: center;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--card-border-subtle);
+  color: var(--text-muted);
+  padding: 4px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   Chat Input Footer
+   ========================================================================== */
+footer {
+  background: rgba(255, 255, 255, 0.7);
+  border-top: 1px solid var(--card-border-subtle);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+footer input {
+  flex: 1;
+  background: var(--card-bg-solid);
+  border: 1px solid var(--card-border-subtle);
+  color: var(--text-heading);
+  padding: 12px 20px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  box-shadow: 0 2px 8px rgba(20, 35, 31, 0.02);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+footer input:focus {
+  border-color: var(--teal-primary);
+  box-shadow: 0 0 0 3px var(--teal-subtle);
+}
+
+footer button {
+  background: var(--teal-primary);
+  color: white;
+  border: none;
+  padding: 12px 26px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+footer button:hover {
+  background: var(--teal-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(15, 118, 110, 0.25);
+}
+
+footer button:active {
+  transform: translateY(0);
+}
+
+/* ==========================================================================
+   Responsive Adaptations
+   ========================================================================== */
+@media (max-width: 860px) {
+  header {
+    padding: 12px 18px;
+  }
+  .main-wrapper {
+    padding: var(--space-3);
+  }
+  .video-card {
+    width: 100%;
+    max-width: 400px;
+    height: 180px;
+  }
+  .msg-row {
+    max-width: 88%;
+  }
+}

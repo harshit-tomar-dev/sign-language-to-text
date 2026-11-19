@@ -12,6 +12,7 @@ import json
 import logging
 import threading
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import websockets
@@ -26,156 +27,254 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign Language Live Chat & Video — SignFlow SRMIST</title>
+  <title>SignFlow — Sign Language Live Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
   <style>
+    :root {
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --bg-sage: #E8F1EC;
+      --bg-cream: #F6F8F3;
+      --bg-lavender: #F1EEF5;
+      --bg-gradient: linear-gradient(135deg, var(--bg-sage) 0%, var(--bg-cream) 45%, var(--bg-lavender) 100%);
+      --teal-primary: #0F766E;
+      --teal-hover: #0D5C56;
+      --teal-subtle: rgba(15, 118, 110, 0.08);
+      --teal-surface: #E6F3F1;
+      --accent-yellow: #F6D860;
+      --card-bg: rgba(255, 255, 255, 0.68);
+      --card-bg-solid: #FFFFFF;
+      --card-border: rgba(255, 255, 255, 0.85);
+      --card-border-subtle: rgba(20, 35, 31, 0.07);
+      --card-shadow: 0 16px 40px rgba(20, 35, 31, 0.05), 0 2px 6px rgba(20, 35, 31, 0.02);
+      --radius-card: 24px;
+      --radius-inner: 16px;
+      --radius-pill: 9999px;
+      --text-heading: #14231F;
+      --text-body: #2C3E38;
+      --text-muted: #5A6E67;
+      --text-subtle: #859891;
+      --status-connected: #10B981;
+      --status-disconnected: #94A3B8;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #0A0D14;
-      color: #F8FAFC;
+      font-family: var(--font-sans);
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-body);
       display: flex;
       flex-direction: column;
       height: 100vh;
       overflow: hidden;
+      -webkit-font-smoothing: antialiased;
     }
     header {
-      background: #121826;
-      border-bottom: 1px solid #20293A;
-      padding: 12px 20px;
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--card-border-subtle);
+      padding: 16px 28px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
+      flex-shrink: 0;
     }
     .brand-wrap {
       display: flex;
       align-items: center;
       gap: 12px;
     }
-    .brand-pill {
-      background: #1E1B4B;
-      color: #818CF8;
-      border: 1px solid #3730A3;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .header-title {
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-inner);
+      background: var(--teal-surface);
+      color: var(--teal-primary);
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .brand-icon svg {
+      width: 20px;
+      height: 20px;
     }
     .header-title h1 {
-      font-size: 15px;
+      font-size: 18px;
       font-weight: 700;
-      letter-spacing: -0.2px;
-      color: #FFFFFF;
+      letter-spacing: -0.3px;
+      color: var(--text-heading);
+      line-height: 1.2;
     }
     .header-title span {
       font-size: 11px;
-      color: #94A3B8;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 2px;
     }
+    .main-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 24px 20px;
+      gap: 14px;
+      overflow: hidden;
+    }
+    .connection-drawer {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-inner);
+      box-shadow: 0 4px 16px rgba(20, 35, 31, 0.03);
+      overflow: hidden;
+    }
+    .connection-drawer summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .connection-drawer summary::-webkit-details-marker { display: none; }
+    .connection-drawer summary:hover { color: var(--text-heading); }
+    .conn-summary-left { display: flex; align-items: center; gap: 8px; }
+    .conn-summary-left svg { width: 14px; height: 14px; }
     .status-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 5px 12px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 600;
-      background: rgba(16, 185, 129, 0.15);
-      color: #10B981;
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
     }
-    .status-badge.disconnected {
-      background: rgba(239, 68, 68, 0.15);
-      color: #EF4444;
-      border-color: rgba(239, 68, 68, 0.3);
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--status-disconnected);
+      transition: background 0.2s ease;
     }
-    .top-controls {
+    .status-badge.connected .status-dot { background: var(--status-connected); }
+    .status-badge.connected { color: var(--teal-primary); font-weight: 600; }
+    .conn-fields {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: 8px;
+      padding: 4px 18px 14px;
     }
-    .top-controls input {
-      background: #090D16;
-      border: 1px solid #20293A;
-      color: #F8FAFC;
-      padding: 7px 12px;
-      border-radius: 8px;
+    .input-pill {
+      background: #FFFFFF;
+      border: 1px solid var(--card-border-subtle);
+      color: var(--text-heading);
+      padding: 7px 14px;
+      border-radius: var(--radius-pill);
       font-size: 12px;
+      font-family: inherit;
       outline: none;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
-    .top-controls input:focus {
-      border-color: #6366F1;
+    .input-pill:focus {
+      border-color: var(--teal-primary);
+      box-shadow: 0 0 0 3px var(--teal-subtle);
     }
-    .top-controls button {
-      background: #6366F1;
-      color: white;
+    .btn-pill {
+      background: var(--teal-primary);
+      color: #FFFFFF;
       border: none;
-      padding: 7px 16px;
-      border-radius: 8px;
+      padding: 7px 18px;
+      border-radius: var(--radius-pill);
       font-size: 12px;
       font-weight: 600;
+      font-family: inherit;
       cursor: pointer;
-      transition: background 0.15s, transform 0.05s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease, transform 0.15s ease;
     }
-    .top-controls button:hover { background: #4F46E5; }
-    .top-controls button:active { transform: scale(0.98); }
-
-    /* Video Strip */
+    .btn-pill:hover {
+      background: var(--teal-hover);
+      transform: translateY(-1px);
+    }
     #video-grid {
       display: flex;
-      gap: 14px;
-      padding: 12px 20px;
-      background: #06080E;
-      border-bottom: 1px solid #20293A;
+      gap: 16px;
       justify-content: center;
       flex-wrap: wrap;
     }
     .video-card {
       position: relative;
-      width: 330px;
+      width: 340px;
       height: 195px;
-      background: #121826;
-      border-radius: 12px;
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-card);
       overflow: hidden;
-      border: 1px solid #20293A;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      box-shadow: var(--card-shadow);
     }
-    .video-badge {
+    .video-card video, .video-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: var(--radius-card);
+    }
+    .video-placeholder {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 16px;
+    }
+    .video-chip {
       position: absolute;
-      bottom: 10px;
-      left: 10px;
-      background: rgba(10, 13, 20, 0.85);
-      backdrop-filter: blur(6px);
-      padding: 4px 10px;
-      border-radius: 6px;
+      bottom: 12px;
+      left: 12px;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 4px 12px;
+      border-radius: var(--radius-pill);
       font-size: 11px;
-      font-weight: 700;
-      color: #F8FAFC;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-weight: 600;
+      color: var(--text-heading);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 2px 8px rgba(20, 35, 31, 0.05);
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
     }
-    .live-dot {
+    .video-chip-dot {
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: #10B981;
+      background: var(--teal-primary);
     }
-
-    /* Chat Section */
+    #chat-card {
+      flex: 1;
+      background: var(--card-bg);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-card);
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
     #chat-container {
       flex: 1;
       padding: 20px;
@@ -187,132 +286,170 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
     .msg-row {
       display: flex;
       flex-direction: column;
-      max-width: 78%;
-      animation: fadeIn 0.15s ease-out;
+      max-width: 72%;
+      animation: fadeIn 0.18s ease-out;
     }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
     .msg-row.incoming { align-self: flex-start; }
     .msg-row.outgoing { align-self: flex-end; align-items: flex-end; }
     .msg-meta {
-      font-size: 10px;
-      color: #94A3B8;
-      margin-bottom: 4px;
+      font-size: 11px;
+      color: var(--text-subtle);
+      margin-bottom: 3px;
       display: flex;
       align-items: center;
       gap: 6px;
     }
     .msg-bubble {
-      padding: 10px 15px;
-      border-radius: 14px;
+      padding: 10px 16px;
       font-size: 14px;
       line-height: 1.45;
       word-break: break-word;
     }
     .msg-row.incoming .msg-bubble {
-      background: #121826;
-      color: #F8FAFC;
-      border: 1px solid #20293A;
-      border-top-left-radius: 4px;
+      background: rgba(255, 255, 255, 0.95);
+      color: var(--text-heading);
+      border: 1px solid var(--card-border-subtle);
+      border-radius: 18px 18px 18px 4px;
+      box-shadow: 0 4px 14px rgba(20, 35, 31, 0.03);
     }
     .msg-row.outgoing .msg-bubble {
-      background: #6366F1;
+      background: var(--teal-primary);
       color: #FFFFFF;
-      border-top-right-radius: 4px;
-      box-shadow: 0 2px 10px rgba(99, 102, 241, 0.25);
+      border-radius: 18px 18px 4px 18px;
+      box-shadow: 0 6px 18px rgba(15, 118, 110, 0.22);
     }
     .sign-badge {
       display: inline-flex;
       align-items: center;
-      gap: 3px;
+      gap: 4px;
       font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      padding: 2px 7px;
-      border-radius: 4px;
-      background: rgba(16, 185, 129, 0.2);
-      color: #34D399;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+      background: var(--teal-surface);
+      color: var(--teal-primary);
       margin-right: 6px;
-      border: 1px solid rgba(16, 185, 129, 0.3);
     }
     .msg-system {
       align-self: center;
-      background: rgba(30, 41, 59, 0.6);
-      color: #94A3B8;
-      padding: 4px 14px;
-      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid var(--card-border-subtle);
+      color: var(--text-muted);
+      padding: 4px 16px;
+      border-radius: var(--radius-pill);
       font-size: 11px;
-      border: 1px solid #20293A;
+      font-weight: 500;
     }
     footer {
-      background: #121826;
-      border-top: 1px solid #20293A;
+      background: rgba(255, 255, 255, 0.7);
+      border-top: 1px solid var(--card-border-subtle);
       padding: 14px 20px;
       display: flex;
       gap: 12px;
+      align-items: center;
     }
     footer input {
       flex: 1;
-      background: #090D16;
-      border: 1px solid #20293A;
-      color: #F8FAFC;
-      padding: 11px 16px;
-      border-radius: 10px;
+      background: #FFFFFF;
+      border: 1px solid var(--card-border-subtle);
+      color: var(--text-heading);
+      padding: 12px 20px;
+      border-radius: var(--radius-pill);
       font-size: 14px;
+      font-family: inherit;
       outline: none;
-      transition: border-color 0.15s;
+      box-shadow: 0 2px 8px rgba(20, 35, 31, 0.02);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
-    footer input:focus { border-color: #6366F1; }
+    footer input:focus {
+      border-color: var(--teal-primary);
+      box-shadow: 0 0 0 3px var(--teal-subtle);
+    }
     footer button {
-      background: #6366F1;
+      background: var(--teal-primary);
       color: white;
       border: none;
-      padding: 0 24px;
-      border-radius: 10px;
+      padding: 12px 26px;
+      border-radius: var(--radius-pill);
       font-size: 13px;
       font-weight: 600;
+      font-family: inherit;
       cursor: pointer;
-      transition: background 0.15s, transform 0.05s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease, transform 0.15s ease;
     }
-    footer button:hover { background: #4F46E5; }
-    footer button:active { transform: scale(0.98); }
+    footer button:hover {
+      background: var(--teal-hover);
+      transform: translateY(-1px);
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="brand-wrap">
-      <div class="brand-pill">✋ SIGNFLOW AI</div>
-      <div class="header-title">
-        <h1>Live Communication & Dual Video Call</h1>
-        <span>SRMIST Academic Live Demo · Harshit Tomar (RA2411003030026)</span>
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
+          <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
+          <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
+          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+        </svg>
       </div>
-    </div>
-    <div class="top-controls">
-      <input id="userName" type="text" value="Person B" placeholder="Your Name" style="width: 105px;">
-      <input id="roomCode" type="text" value="SIGN123" placeholder="Room" style="width: 85px;">
-      <button id="btnConnect" onclick="toggleConnection()">Reconnect</button>
-      <div id="statusBadge" class="status-badge">Connecting...</div>
+      <div class="header-title">
+        <h1>SignFlow</h1>
+        <span>SRM Institute of Science and Technology · Harshit Tomar (RA2411003030026) · Bhavishya · Shivank</span>
+      </div>
     </div>
   </header>
 
-  <!-- Dual Camera Video Bar: Harshit's Live Camera + Friend's Live Camera -->
-  <div id="video-grid">
-    <div class="video-card">
-      <img id="remoteVideo" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
-      <span id="remotePlaceholder" style="font-size: 12px; color: #94A3B8; text-align: center; padding: 12px;">Waiting for Harshit's Live Camera...</span>
-      <div class="video-badge"><span class="live-dot"></span> Harshit (Person A)</div>
+  <div class="main-wrapper">
+    <details class="connection-drawer">
+      <summary>
+        <div class="conn-summary-left">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>Connection Settings</span>
+        </div>
+        <div id="statusBadge" class="status-badge disconnected">
+          <span class="status-dot"></span>
+          <span id="statusText">Disconnected</span>
+        </div>
+      </summary>
+      <div class="conn-fields">
+        <input id="userName" class="input-pill" type="text" value="Person B" placeholder="Your Name" style="width: 120px;">
+        <input id="roomCode" class="input-pill" type="text" value="SIGN123" placeholder="Room" style="width: 95px;">
+        <button id="btnConnect" class="btn-pill" onclick="toggleConnection()">Reconnect</button>
+      </div>
+    </details>
+
+    <div id="video-grid">
+      <div class="video-card">
+        <img id="remoteVideo" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
+        <span id="remotePlaceholder" class="video-placeholder">Waiting for remote camera stream...</span>
+        <div class="video-chip"><span class="video-chip-dot"></span> Person A</div>
+      </div>
+      <div class="video-card">
+        <video id="localVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover;"></video>
+        <div class="video-chip"><span class="video-chip-dot"></span> Your Camera</div>
+      </div>
     </div>
-    <div class="video-card">
-      <video id="localVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover;"></video>
-      <div class="video-badge"><span class="live-dot"></span> Your Camera (Person B)</div>
+
+    <div id="chat-card">
+      <div id="chat-container"></div>
+      <footer>
+        <input id="inputMessage" type="text" placeholder="Type a message..." onkeydown="handleKeyDown(event)">
+        <button onclick="sendMessage()">Send</button>
+      </footer>
     </div>
   </div>
-
-  <div id="chat-container"></div>
-
-  <footer>
-    <input id="inputMessage" type="text" placeholder="Type a message to Harshit..." onkeydown="handleKeyDown(event)">
-    <button onclick="sendMessage()">Send</button>
-  </footer>
 
   <script>
     let ws = null;
@@ -337,7 +474,6 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
         const localVideo = document.getElementById("localVideo");
         localVideo.srcObject = localStream;
 
-        // Send video frame every 120ms
         setInterval(() => {
           if (!ws || ws.readyState !== WebSocket.OPEN) return;
           if (localVideo.videoWidth > 0 && localVideo.videoHeight > 0) {
@@ -359,23 +495,32 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
       }
     }
 
+    function updateStatus(connected, text) {
+      const badge = document.getElementById("statusBadge");
+      const statusText = document.getElementById("statusText");
+      if (connected) {
+        badge.className = "status-badge connected";
+        if (statusText) statusText.textContent = text || "Connected";
+      } else {
+        badge.className = "status-badge disconnected";
+        if (statusText) statusText.textContent = text || "Disconnected";
+      }
+    }
+
     function initConnection() {
       const url = getWsUrl();
-      const statusBadge = document.getElementById("statusBadge");
-      statusBadge.className = "status-badge disconnected";
-      statusBadge.textContent = "Connecting...";
+      updateStatus(false, "Connecting...");
 
       try {
         ws = new WebSocket(url);
       } catch (e) {
-        statusBadge.textContent = "Error";
+        updateStatus(false, "Disconnected");
         return;
       }
 
       ws.onopen = () => {
         isConnected = true;
-        statusBadge.className = "status-badge";
-        statusBadge.textContent = "● Connected";
+        updateStatus(true, "Connected");
 
         const room = document.getElementById("roomCode").value.trim().toUpperCase() || "SIGN123";
         const sender = document.getElementById("userName").value.trim() || "Person B";
@@ -406,14 +551,12 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
 
       ws.onclose = () => {
         isConnected = false;
-        statusBadge.className = "status-badge disconnected";
-        statusBadge.textContent = "○ Disconnected";
+        updateStatus(false, "Disconnected");
       };
 
       ws.onerror = (err) => {
         console.error("WebSocket error:", err);
       };
-    }
     }
 
     function toggleConnection() {
@@ -448,7 +591,7 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
       bubble.className = "msg-bubble";
 
       if (data.sender.toLowerCase().includes("person a") || data.sender.toLowerCase().includes("harshit")) {
-        bubble.innerHTML = `<span class="sign-badge">✋ Hand Sign</span> ${data.text}`;
+        bubble.innerHTML = `<span class="sign-badge">Sign</span> ${data.text}`;
       } else {
         bubble.textContent = data.text;
       }
@@ -478,13 +621,12 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
       input.focus();
     }
 
-    function handleKeyDown(e) {
-      if (e.key === "Enter") {
+    function handleKeyDown(event) {
+      if (event.key === "Enter") {
         sendMessage();
       }
     }
 
-    // Connect automatically and start camera when page loads
     window.addEventListener("DOMContentLoaded", () => {
       initConnection();
       startCamera();
@@ -614,6 +756,15 @@ class ChatServer:
             upgrade = request.headers.get("Upgrade", "").lower()
             if upgrade == "websocket":
                 return None
+
+        # Serve static CSS stylesheet
+        if hasattr(request, "path") and request.path in ("/static/style.css", "/style.css"):
+            css_path = Path(__file__).parent / "static" / "style.css"
+            if css_path.exists():
+                css_content = css_path.read_text(encoding="utf-8")
+                resp = connection.respond(http.HTTPStatus.OK, css_content)
+                resp.headers["Content-Type"] = "text/css; charset=utf-8"
+                return resp
 
         # If client requested root or web chat in a browser via standard HTTP GET
         if hasattr(request, "path") and request.path in ("/", "/chat", "/index.html"):

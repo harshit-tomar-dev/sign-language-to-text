@@ -39,45 +39,66 @@ from sign_language.utils.paths import resolve
 
 logger = logging.getLogger(__name__)
 
-# Appearance: Professional Pinterest / SaaS Obsidian Theme
-ctk.set_appearance_mode("Dark")
+# Appearance: Light, Calm, Professional Soft Glass Aesthetic
+ctk.set_appearance_mode("Light")
 ctk.set_default_color_theme("blue")
 
 PALETTE = {
-    "bg_main": "#0A0D14",         # Deep obsidian luxury dark
-    "card_bg": "#121826",         # Elevated card surface
-    "card_border": "#20293A",     # Crisp 1px border
-    "text_primary": "#FFFFFF",    # Pure white
-    "text_secondary": "#94A3B8",  # Muted slate
-    "text_muted": "#64748B",      # Dark muted slate
-    "accent_blue": "#6366F1",     # Indigo/Blurple accent
-    "accent_hover": "#4F46E5",    # Darker Indigo
-    "accent_coral": "#E60023",    # Pinterest Signature Red/Coral
-    "accent_coral_hover": "#C9001D",
-    "success_green": "#10B981",   # Emerald
+    "bg_main": "#F0F4F2",          # Soft sage-cream background (CoachPro / Crextio aesthetic)
+    "card_bg": "#FFFFFF",          # Translucent soft white card surface
+    "card_border": "#E2E8E5",      # Subtle 1px border
+    "text_primary": "#14231F",     # Dark green-charcoal for headings & values
+    "text_secondary": "#5A6E67",   # Muted grey-green for labels & chips
+    "text_muted": "#859891",       # Soft subtle grey-green
+    "accent_teal": "#0F766E",      # Primary deep teal
+    "accent_teal_hover": "#0D5C56",# Darker teal hover
+    "accent_yellow": "#F6D860",    # Soft yellow highlight
+    "accent_blue": "#0F766E",      # Backward-compatible alias
+    "accent_hover": "#0D5C56",     # Backward-compatible alias
+    "btn_secondary": "#F0F4F2",    # Soft secondary pill button
+    "btn_secondary_hover": "#E4EAE6",
+    "success_green": "#10B981",    # Emerald for live/connected states
     "success_hover": "#059669",
-    "warning_amber": "#F59E0B",   # Amber
-    "danger_red": "#EF4444",      # Muted Red
-    "danger_hover": "#DC2626",
-    "video_bg": "#06080E",        # Ultra-deep recessed viewport
-    "input_bg": "#090D16",        # Recessed input field
+    "warning_amber": "#D97706",    # Muted amber
+    "danger_red": "#E11D48",       # Rose danger
+    "danger_hover": "#BE123C",
+    "video_bg": "#14231F",         # Dark green-charcoal video viewport clipped to rounded corners
+    "input_bg": "#F7FAF8",         # Soft light input field
 }
 
-SIGN_INFO: dict[str, dict[str, str]] = {
-    "HELLO": {"icon": "👋", "title": "HELLO", "color": "#818CF8"},
-    "THANK_YOU": {"icon": "🙏", "title": "THANK YOU", "color": "#34D399"},
-    "PLEASE": {"icon": "✨", "title": "PLEASE", "color": "#C084FC"},
-    "YES": {"icon": "👍", "title": "YES", "color": "#34D399"},
-    "NO": {"icon": "👎", "title": "NO", "color": "#F87171"},
-    "SORRY": {"icon": "✊", "title": "SORRY", "color": "#FBBF24"},
-    "HELP": {"icon": "🆘", "title": "HELP", "color": "#EF4444"},
-    "WATER": {"icon": "💧", "title": "WATER", "color": "#38BDF8"},
-    "EAT": {"icon": "🍽️", "title": "EAT", "color": "#FB923C"},
-    "I_LOVE_YOU": {"icon": "🤟", "title": "I LOVE YOU", "color": "#F472B6"},
-    "I_AM_FINE": {"icon": "😊", "title": "I AM FINE", "color": "#34D399"},
-    "GOODBYE": {"icon": "🙋", "title": "GOODBYE", "color": "#818CF8"},
-    "MY_NAME_IS": {"icon": "✌️", "title": "MY NAME IS HARSHIT", "color": "#A78BFA"},
+SIGN_INFO: dict[str, str] = {
+    "HELLO": "Hello",
+    "THANK_YOU": "Thank You",
+    "PLEASE": "Please",
+    "YES": "Yes",
+    "NO": "No",
+    "SORRY": "Sorry",
+    "HELP": "Help",
+    "WATER": "Water",
+    "EAT": "Eat",
+    "I_LOVE_YOU": "I Love You",
+    "I_AM_FINE": "I Am Fine",
+    "GOODBYE": "Goodbye",
+    "MY_NAME_IS": "My name is Harshit",
 }
+
+
+class TextboxEntryAdapter:
+    """Adapts CTkTextbox to support Entry-like get(), delete(), and insert() methods with line wrapping."""
+
+    def __init__(self, textbox: ctk.CTkTextbox) -> None:
+        self._tb = textbox
+
+    def get(self) -> str:
+        return self._tb.get("1.0", "end-1c").strip()
+
+    def delete(self, start: Any = 0, end: Any = "end") -> None:
+        self._tb.delete("1.0", "end")
+
+    def insert(self, idx: Any, text: str) -> None:
+        self._tb.delete("1.0", "end")
+        self._tb.insert("1.0", text)
+        self._tb.see("end")
 
 
 class SignLanguageApp(ctk.CTk):
@@ -149,7 +170,7 @@ class SignLanguageApp(ctk.CTk):
             logger.error("Failed to initialize vision pipeline: %s", e)
 
     def _build_ui(self) -> None:
-        # 1. Top Header Bar (Pinterest / Modern SaaS Frosted Style)
+        # 1. Top Header Bar (Light Soft Glass Theme)
         self.header_frame = ctk.CTkFrame(
             self,
             height=66,
@@ -160,37 +181,17 @@ class SignLanguageApp(ctk.CTk):
         )
         self.header_frame.pack(side="top", fill="x")
 
-        # Brand Mark & Academic Metadata
+        # Brand & Academic Metadata on Left
         header_text_box = ctk.CTkFrame(self.header_frame, fg_color="transparent")
-        header_text_box.pack(side="left", padx=20, pady=10)
-
-        title_row = ctk.CTkFrame(header_text_box, fg_color="transparent")
-        title_row.pack(anchor="w")
-
-        brand_pill = ctk.CTkFrame(
-            title_row,
-            fg_color="#1E1B4B",
-            corner_radius=6,
-            border_width=1,
-            border_color="#3730A3",
-        )
-        brand_pill.pack(side="left", padx=(0, 10))
-
-        brand_lbl = ctk.CTkLabel(
-            brand_pill,
-            text="✋ SIGNFLOW AI",
-            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
-            text_color="#818CF8",
-        )
-        brand_lbl.pack(padx=8, pady=3)
+        header_text_box.pack(side="left", padx=24, pady=12)
 
         title_lbl = ctk.CTkLabel(
-            title_row,
-            text="SIGN LANGUAGE TO TEXT CONVERSION",
-            font=ctk.CTkFont(family="Segoe UI", size=16, weight="bold"),
+            header_text_box,
+            text="SignFlow",
+            font=ctk.CTkFont(family="Segoe UI", size=18, weight="bold"),
             text_color=PALETTE["text_primary"],
         )
-        title_lbl.pack(side="left")
+        title_lbl.pack(anchor="w")
 
         sub_lbl = ctk.CTkLabel(
             header_text_box,
@@ -198,30 +199,13 @@ class SignLanguageApp(ctk.CTk):
             font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=PALETTE["text_secondary"],
         )
-        sub_lbl.pack(anchor="w", pady=(2, 0))
+        sub_lbl.pack(anchor="w", pady=(1, 0))
 
-        # Model Status Pill Badge (Rounded Pinterest style)
-        self.badge_frame = ctk.CTkFrame(
-            self.header_frame,
-            fg_color="#131B2E",
-            corner_radius=20,
-            border_width=1,
-            border_color="#202D44",
-        )
-        self.badge_frame.pack(side="right", padx=20, pady=14)
-
-        self.model_status_label = ctk.CTkLabel(
-            self.badge_frame,
-            text="Checking Model...",
-            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
-            text_color=PALETTE["text_primary"],
-        )
-        self.model_status_label.pack(padx=16, pady=6)
-        self._update_model_badge()
+        # Top Right: Completely empty (Part 1 requirement 2: no badge, no dot, no count)
 
         # 2. Main Content Grid (Split 2 Columns: Left = Camera, Right = Recognition & Chat)
         self.content_grid = ctk.CTkFrame(self, fg_color="transparent")
-        self.content_grid.pack(fill="both", expand=True, padx=16, pady=12)
+        self.content_grid.pack(fill="both", expand=True, padx=20, pady=16)
         self.content_grid.grid_columnconfigure(0, weight=6)
         self.content_grid.grid_columnconfigure(1, weight=5)
         self.content_grid.grid_rowconfigure(0, weight=1)
@@ -232,41 +216,45 @@ class SignLanguageApp(ctk.CTk):
         self.left_col = ctk.CTkFrame(
             self.content_grid,
             fg_color=PALETTE["card_bg"],
-            corner_radius=14,
+            corner_radius=24,
             border_width=1,
             border_color=PALETTE["card_border"],
         )
-        self.left_col.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        self.left_col.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
 
         # Camera Header
         cam_header = ctk.CTkFrame(self.left_col, height=36, fg_color="transparent")
-        cam_header.pack(fill="x", padx=16, pady=(12, 4))
+        cam_header.pack(fill="x", padx=20, pady=(16, 4))
 
         self.camera_status_lbl = ctk.CTkLabel(
             cam_header,
-            text="○ CAMERA: STANDBY",
+            text="Camera Feed",
             font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
-            text_color=PALETTE["text_secondary"],
+            text_color=PALETTE["text_primary"],
         )
         self.camera_status_lbl.pack(side="left")
 
         self.fps_lbl = ctk.CTkLabel(
             cam_header,
             text="FPS: --",
-            font=ctk.CTkFont(family="Segoe UI", size=11),
+            font=ctk.CTkFont(family="Segoe UI", size=10, weight="bold"),
+            fg_color=PALETTE["btn_secondary"],
             text_color=PALETTE["text_secondary"],
+            corner_radius=9999,
+            padx=10,
+            pady=2,
         )
         self.fps_lbl.pack(side="right")
 
-        # Camera Feeds Container (Single camera for demonstration to Sir; Dual camera when friend connects)
+        # Camera Feeds Container
         self.video_container = ctk.CTkFrame(self.left_col, fg_color="transparent")
-        self.video_container.pack(fill="both", expand=True, padx=14, pady=6)
+        self.video_container.pack(fill="both", expand=True, padx=16, pady=6)
 
         # 1. Primary Local Camera (You - Person A)
         self.local_cam_card = ctk.CTkFrame(
             self.video_container,
             fg_color=PALETTE["video_bg"],
-            corner_radius=10,
+            corner_radius=20,
             border_width=1,
             border_color=PALETTE["card_border"],
         )
@@ -274,64 +262,69 @@ class SignLanguageApp(ctk.CTk):
 
         self.local_cam_title = ctk.CTkLabel(
             self.local_cam_card,
-            text="● Local Camera (You - Person A)",
+            text="Local Camera (You - Person A)",
             font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
-            text_color=PALETTE["accent_blue"],
+            text_color=PALETTE["accent_teal"],
         )
-        # Note: local_cam_title is hidden in single camera mode, shown when dual camera activates
 
         self.video_label = ctk.CTkLabel(
             self.local_cam_card,
-            text="📷 Camera is currently idle.\n\nClick '▶ Start Camera' below to start live prediction.",
+            text="Camera Inactive\n\nClick 'Start Camera' below to start live prediction.",
             fg_color="transparent",
             font=ctk.CTkFont(family="Segoe UI", size=13),
-            text_color=PALETTE["text_secondary"],
+            text_color="#94A3B8",
         )
         self.video_label.pack(fill="both", expand=True, padx=4, pady=4)
 
-        # 2. Remote Camera (Friend in room) - Hidden by default for single camera demo to Sir
+        # 2. Remote Camera (Friend in room)
         self.remote_cam_card = ctk.CTkFrame(
             self.video_container,
             fg_color=PALETTE["video_bg"],
-            corner_radius=10,
+            corner_radius=20,
             border_width=1,
             border_color=PALETTE["card_border"],
         )
         self.remote_cam_title = ctk.CTkLabel(
             self.remote_cam_card,
-            text="● Remote Camera (Friend - Person B)",
+            text="Remote Camera (Friend - Person B)",
             font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
-            text_color=PALETTE["success_green"],
+            text_color=PALETTE["accent_teal"],
         )
-        self.remote_cam_title.pack(anchor="nw", padx=10, pady=(6, 0))
+        self.remote_cam_title.pack(anchor="nw", padx=12, pady=(8, 0))
 
         self.remote_video_label = ctk.CTkLabel(
             self.remote_cam_card,
             text="Waiting for friend's camera stream...",
             fg_color="transparent",
             font=ctk.CTkFont(family="Segoe UI", size=12),
-            text_color=PALETTE["text_secondary"],
+            text_color="#94A3B8",
         )
         self.remote_video_label.pack(fill="both", expand=True, padx=4, pady=4)
-        # self.remote_cam_card starts hidden for single camera mode!
         self.remote_cam_card.pack_forget()
 
-        # Camera Controls
-        cam_controls = ctk.CTkFrame(self.left_col, height=52, fg_color="transparent")
-        cam_controls.pack(fill="x", padx=14, pady=(6, 12))
+        # Camera Controls (Floating Pill Bar at bottom of card)
+        cam_controls = ctk.CTkFrame(
+            self.left_col,
+            height=48,
+            fg_color=PALETTE["input_bg"],
+            corner_radius=9999,
+            border_width=1,
+            border_color=PALETTE["card_border"],
+        )
+        cam_controls.pack(fill="x", padx=18, pady=(8, 16))
 
         self.btn_toggle_cam = ctk.CTkButton(
             cam_controls,
-            text="▶ Start Camera",
+            text="Start Camera",
             command=self.toggle_camera,
-            fg_color=PALETTE["accent_blue"],
-            hover_color=PALETTE["accent_hover"],
-            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
-            corner_radius=8,
-            width=135,
-            height=34,
+            fg_color=PALETTE["accent_teal"],
+            hover_color=PALETTE["accent_teal_hover"],
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            corner_radius=9999,
+            width=120,
+            height=32,
         )
-        self.btn_toggle_cam.pack(side="left", padx=(0, 10))
+        self.btn_toggle_cam.pack(side="left", padx=6, pady=4)
 
         self.switch_landmarks = ctk.CTkSwitch(
             cam_controls,
@@ -339,10 +332,10 @@ class SignLanguageApp(ctk.CTk):
             command=self._on_toggle_landmarks,
             font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=PALETTE["text_secondary"],
-            progress_color=PALETTE["accent_blue"],
+            progress_color=PALETTE["accent_teal"],
         )
         self.switch_landmarks.select()
-        self.switch_landmarks.pack(side="left", padx=8)
+        self.switch_landmarks.pack(side="left", padx=10)
 
         self.switch_mirror = ctk.CTkSwitch(
             cam_controls,
@@ -350,13 +343,13 @@ class SignLanguageApp(ctk.CTk):
             command=self._on_toggle_mirror,
             font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=PALETTE["text_secondary"],
-            progress_color=PALETTE["accent_blue"],
+            progress_color=PALETTE["accent_teal"],
         )
         self.switch_mirror.select()
-        self.switch_mirror.pack(side="left", padx=8)
+        self.switch_mirror.pack(side="left", padx=10)
 
         # ========================================================
-        # RIGHT COLUMN: ML Prediction, Sign-to-Text & Real-Time Chat
+        # RIGHT COLUMN: Recognition, Buffer & Chat
         # ========================================================
         self.right_col = ctk.CTkFrame(self.content_grid, fg_color="transparent")
         self.right_col.grid(row=0, column=1, sticky="nsew")
@@ -365,73 +358,66 @@ class SignLanguageApp(ctk.CTk):
         self.card_prediction = ctk.CTkFrame(
             self.right_col,
             fg_color=PALETTE["card_bg"],
-            corner_radius=14,
+            corner_radius=24,
             border_width=1,
             border_color=PALETTE["card_border"],
         )
-        self.card_prediction.pack(fill="x", pady=(0, 10))
+        self.card_prediction.pack(fill="x", pady=(0, 12))
 
         pred_header_row = ctk.CTkFrame(self.card_prediction, fg_color="transparent")
-        pred_header_row.pack(fill="x", padx=16, pady=(10, 2))
+        pred_header_row.pack(fill="x", padx=20, pady=(14, 2))
 
         pred_title = ctk.CTkLabel(
             pred_header_row,
-            text="✦ REAL-TIME RECOGNITION",
-            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
-            text_color="#818CF8",
+            text="Real-Time Recognition",
+            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
+            text_color=PALETTE["text_primary"],
         )
         pred_title.pack(side="left")
-
-        self.lbl_auto_send_tag = ctk.CTkLabel(
-            pred_header_row,
-            text="○ Engine Ready",
-            font=ctk.CTkFont(family="Segoe UI", size=10, weight="bold"),
-            text_color=PALETTE["text_muted"],
-        )
-        self.lbl_auto_send_tag.pack(side="right")
 
         # Detected Sign Big Label
         self.lbl_detected_sign = ctk.CTkLabel(
             self.card_prediction,
-            text="✋ Waiting for hand...",
-            font=ctk.CTkFont(family="Segoe UI", size=22, weight="bold"),
+            text="Waiting for gesture...",
+            font=ctk.CTkFont(family="Segoe UI", size=26, weight="bold"),
             text_color=PALETTE["text_primary"],
         )
-        self.lbl_detected_sign.pack(anchor="w", padx=16, pady=(2, 4))
+        self.lbl_detected_sign.pack(anchor="w", padx=20, pady=(4, 6))
 
-        # Confidence Bar and Value
+        # Confidence Bar and Value (Slim bar)
         conf_row = ctk.CTkFrame(self.card_prediction, fg_color="transparent")
-        conf_row.pack(fill="x", padx=16, pady=(2, 4))
+        conf_row.pack(fill="x", padx=20, pady=(2, 4))
 
         self.lbl_confidence = ctk.CTkLabel(
             conf_row,
             text="Confidence: 0%",
             font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=PALETTE["text_secondary"],
-            width=120,
+            width=110,
             anchor="w",
         )
         self.lbl_confidence.pack(side="left")
 
         self.progress_confidence = ctk.CTkProgressBar(
             conf_row,
-            height=8,
-            corner_radius=4,
-            progress_color=PALETTE["accent_blue"],
-            fg_color=PALETTE["card_border"],
+            height=6,
+            corner_radius=3,
+            progress_color=PALETTE["accent_teal"],
+            fg_color="#EBF1EE",
         )
         self.progress_confidence.pack(side="left", fill="x", expand=True, padx=(8, 0))
         self.progress_confidence.set(0.0)
 
-        # Stability Meter (Votes out of 10)
+        # Stability Meter (Slim bar instead of 10 circles)
         stab_row = ctk.CTkFrame(self.card_prediction, fg_color="transparent")
-        stab_row.pack(fill="x", padx=16, pady=(2, 10))
+        stab_row.pack(fill="x", padx=20, pady=(2, 14))
 
         self.lbl_stability = ctk.CTkLabel(
             stab_row,
-            text="Stability: ○ ○ ○ ○ ○ ○ ○ ○ ○ ○ (0/10)",
+            text="Stability: 0/10",
             font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=PALETTE["text_secondary"],
+            width=110,
             anchor="w",
         )
         self.lbl_stability.pack(side="left")
@@ -440,59 +426,60 @@ class SignLanguageApp(ctk.CTk):
             stab_row,
             height=6,
             corner_radius=3,
-            progress_color=PALETTE["success_green"],
-            fg_color=PALETTE["card_border"],
-            width=120,
+            progress_color=PALETTE["accent_teal"],
+            fg_color="#EBF1EE",
         )
-        self.progress_stability.pack(side="right", padx=(8, 0))
+        self.progress_stability.pack(side="left", fill="x", expand=True, padx=(8, 0))
         self.progress_stability.set(0.0)
 
-        # ---------------- Card 2: Sign to Text Composer ----------------
+        # ---------------- Card 2: Sign to Text Composer (With Word Wrap) ----------------
         self.card_composer = ctk.CTkFrame(
             self.right_col,
             fg_color=PALETTE["card_bg"],
-            corner_radius=14,
+            corner_radius=24,
             border_width=1,
             border_color=PALETTE["card_border"],
         )
-        self.card_composer.pack(fill="x", pady=(0, 10))
+        self.card_composer.pack(fill="x", pady=(0, 12))
 
         comp_header = ctk.CTkFrame(self.card_composer, fg_color="transparent")
-        comp_header.pack(fill="x", padx=16, pady=(10, 4))
+        comp_header.pack(fill="x", padx=20, pady=(12, 4))
 
         comp_title = ctk.CTkLabel(
             comp_header,
-            text="📝 CONVERTED SENTENCE BUFFER",
-            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
-            text_color=PALETTE["text_secondary"],
+            text="Sentence Buffer",
+            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
+            text_color=PALETTE["text_primary"],
         )
         comp_title.pack(side="left")
 
-        # Composed Text Display Entry
-        self.entry_composed_text = ctk.CTkEntry(
+        # Composed Text Display (Multi-line with word wrapping)
+        self.txt_composed_widget = ctk.CTkTextbox(
             self.card_composer,
             font=ctk.CTkFont(family="Segoe UI", size=13),
-            placeholder_text="Recognized words accumulate here into sentences...",
-            height=36,
-            corner_radius=8,
+            height=46,
+            wrap="word",
+            corner_radius=12,
             fg_color=PALETTE["input_bg"],
             border_color=PALETTE["card_border"],
+            border_width=1,
             text_color=PALETTE["text_primary"],
         )
-        self.entry_composed_text.pack(fill="x", padx=16, pady=(4, 8))
+        self.txt_composed_widget.pack(fill="x", padx=20, pady=(2, 8))
+        self.entry_composed_text = TextboxEntryAdapter(self.txt_composed_widget)
 
         # Sentence Controls
         comp_btn_row = ctk.CTkFrame(self.card_composer, fg_color="transparent")
-        comp_btn_row.pack(fill="x", padx=16, pady=(2, 10))
+        comp_btn_row.pack(fill="x", padx=20, pady=(2, 12))
 
         self.btn_send_sign = ctk.CTkButton(
             comp_btn_row,
             text="Send to Chat",
             command=self._send_composed_to_chat,
-            fg_color=PALETTE["success_green"],
-            hover_color=PALETTE["success_hover"],
+            fg_color=PALETTE["accent_teal"],
+            hover_color=PALETTE["accent_teal_hover"],
             font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
-            corner_radius=6,
+            corner_radius=9999,
             height=30,
             width=105,
         )
@@ -500,25 +487,27 @@ class SignLanguageApp(ctk.CTk):
 
         self.btn_backspace = ctk.CTkButton(
             comp_btn_row,
-            text="⌫ Backspace",
+            text="Backspace",
             command=self._backspace_composed,
-            fg_color="#1E293B",
-            hover_color="#334155",
+            fg_color=PALETTE["btn_secondary"],
+            hover_color=PALETTE["btn_secondary_hover"],
             font=ctk.CTkFont(family="Segoe UI", size=11),
-            corner_radius=6,
+            text_color=PALETTE["text_primary"],
+            corner_radius=9999,
             height=30,
-            width=90,
+            width=85,
         )
         self.btn_backspace.pack(side="left", padx=4)
 
         self.btn_clear_comp = ctk.CTkButton(
             comp_btn_row,
-            text="✕ Clear",
+            text="Clear",
             command=self._clear_composed,
-            fg_color="#1E293B",
-            hover_color="#334155",
+            fg_color=PALETTE["btn_secondary"],
+            hover_color=PALETTE["btn_secondary_hover"],
             font=ctk.CTkFont(family="Segoe UI", size=11),
-            corner_radius=6,
+            text_color=PALETTE["text_primary"],
+            corner_radius=9999,
             height=30,
             width=65,
         )
@@ -527,27 +516,29 @@ class SignLanguageApp(ctk.CTk):
         # Quick ML Actions: Train & Status
         self.btn_train = ctk.CTkButton(
             comp_btn_row,
-            text="⚡ Train Model",
+            text="Train Model",
             command=self._on_click_train,
-            fg_color=PALETTE["accent_blue"],
-            hover_color=PALETTE["accent_hover"],
-            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
-            corner_radius=6,
+            fg_color=PALETTE["btn_secondary"],
+            hover_color=PALETTE["btn_secondary_hover"],
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            text_color=PALETTE["text_primary"],
+            corner_radius=9999,
             height=30,
-            width=95,
+            width=90,
         )
         self.btn_train.pack(side="right", padx=(4, 0))
 
         self.btn_status = ctk.CTkButton(
             comp_btn_row,
-            text="📊 Dataset",
+            text="Dataset",
             command=self._show_dataset_status_popup,
-            fg_color="#1E293B",
-            hover_color="#334155",
+            fg_color=PALETTE["btn_secondary"],
+            hover_color=PALETTE["btn_secondary_hover"],
             font=ctk.CTkFont(family="Segoe UI", size=11),
-            corner_radius=6,
+            text_color=PALETTE["text_primary"],
+            corner_radius=9999,
             height=30,
-            width=75,
+            width=70,
         )
         self.btn_status.pack(side="right", padx=4)
 
@@ -555,7 +546,7 @@ class SignLanguageApp(ctk.CTk):
         self.card_chat = ctk.CTkFrame(
             self.right_col,
             fg_color=PALETTE["card_bg"],
-            corner_radius=14,
+            corner_radius=24,
             border_width=1,
             border_color=PALETTE["card_border"],
         )
@@ -563,153 +554,172 @@ class SignLanguageApp(ctk.CTk):
 
         # Title & LAN IP Display Bar
         chat_top_bar = ctk.CTkFrame(self.card_chat, fg_color="transparent")
-        chat_top_bar.pack(fill="x", padx=16, pady=(8, 2))
+        chat_top_bar.pack(fill="x", padx=20, pady=(12, 4))
 
         lbl_chat_title = ctk.CTkLabel(
             chat_top_bar,
-            text="💬 TWO-PERSON LIVE CHAT (ROOM)",
-            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            text="Live Chat",
+            font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
             text_color=PALETTE["text_primary"],
         )
         lbl_chat_title.pack(side="left")
 
-        lbl_ip_info = ctk.CTkLabel(
-            chat_top_bar,
-            text=f"LAN IP: {self.local_ip}",
-            font=ctk.CTkFont(family="Segoe UI", size=10),
+        # Status Dot & Full Disconnected Label
+        status_box = ctk.CTkFrame(chat_top_bar, fg_color="transparent")
+        status_box.pack(side="left", padx=12)
+
+        self.chat_status_dot = ctk.CTkLabel(
+            status_box,
+            text="●",
+            font=ctk.CTkFont(family="Segoe UI", size=11),
+            text_color=PALETTE["text_muted"],
+        )
+        self.chat_status_dot.pack(side="left", padx=(0, 4))
+
+        self.lbl_chat_status = ctk.CTkLabel(
+            status_box,
+            text="Disconnected",
+            font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=PALETTE["text_secondary"],
         )
-        lbl_ip_info.pack(side="right")
+        self.lbl_chat_status.pack(side="left")
 
         self.btn_global_share = ctk.CTkButton(
             chat_top_bar,
-            text="✦ Global Link",
+            text="Global Link",
             command=self._start_global_tunnel,
-            fg_color="#312E81",
-            hover_color="#4338CA",
+            fg_color=PALETTE["btn_secondary"],
+            hover_color=PALETTE["btn_secondary_hover"],
             font=ctk.CTkFont(family="Segoe UI", size=10, weight="bold"),
-            corner_radius=6,
-            height=24,
-            width=110,
+            text_color=PALETTE["accent_teal"],
+            corner_radius=9999,
+            height=26,
+            width=90,
         )
-        self.btn_global_share.pack(side="right", padx=(0, 8))
+        self.btn_global_share.pack(side="right", padx=(6, 0))
 
-        # Chat Connection Header (Host, Port, Room Code, Username, Connect)
-        chat_conn_bar = ctk.CTkFrame(self.card_chat, fg_color="transparent")
-        chat_conn_bar.pack(fill="x", padx=16, pady=(2, 4))
+        self.btn_toggle_conn = ctk.CTkButton(
+            chat_top_bar,
+            text="Settings ▾",
+            command=self._toggle_conn_drawer,
+            fg_color=PALETTE["btn_secondary"],
+            hover_color=PALETTE["btn_secondary_hover"],
+            font=ctk.CTkFont(family="Segoe UI", size=10, weight="bold"),
+            text_color=PALETTE["text_secondary"],
+            corner_radius=9999,
+            height=26,
+            width=85,
+        )
+        self.btn_toggle_conn.pack(side="right")
+
+        # Collapsible Connection Drawer (Hidden by default to avoid clutter)
+        self.conn_drawer = ctk.CTkFrame(self.card_chat, fg_color="transparent")
+        self.is_conn_drawer_open = False
 
         host_lbl = ctk.CTkLabel(
-            chat_conn_bar,
+            self.conn_drawer,
             text="Host:",
-            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=PALETTE["text_secondary"],
         )
         host_lbl.pack(side="left", padx=(0, 2))
 
         self.entry_host = ctk.CTkEntry(
-            chat_conn_bar,
-            width=92,
+            self.conn_drawer,
+            width=85,
             height=28,
             font=ctk.CTkFont(family="Segoe UI", size=11),
             fg_color=PALETTE["input_bg"],
             border_color=PALETTE["card_border"],
-            corner_radius=6,
+            corner_radius=9999,
         )
         self.entry_host.insert(0, "127.0.0.1")
         self.entry_host.pack(side="left", padx=(0, 6))
 
         port_lbl = ctk.CTkLabel(
-            chat_conn_bar,
+            self.conn_drawer,
             text="Port:",
-            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=PALETTE["text_secondary"],
         )
         port_lbl.pack(side="left", padx=(0, 2))
 
         self.entry_port = ctk.CTkEntry(
-            chat_conn_bar,
-            width=50,
+            self.conn_drawer,
+            width=48,
             height=28,
             font=ctk.CTkFont(family="Segoe UI", size=11),
             fg_color=PALETTE["input_bg"],
             border_color=PALETTE["card_border"],
-            corner_radius=6,
+            corner_radius=9999,
         )
         self.entry_port.insert(0, "8765")
         self.entry_port.pack(side="left", padx=(0, 6))
 
         room_lbl = ctk.CTkLabel(
-            chat_conn_bar,
+            self.conn_drawer,
             text="Room:",
-            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=PALETTE["text_secondary"],
         )
         room_lbl.pack(side="left", padx=(0, 2))
 
         self.entry_room = ctk.CTkEntry(
-            chat_conn_bar,
-            width=68,
+            self.conn_drawer,
+            width=65,
             height=28,
             font=ctk.CTkFont(family="Segoe UI", size=11),
             fg_color=PALETTE["input_bg"],
             border_color=PALETTE["card_border"],
-            corner_radius=6,
+            corner_radius=9999,
         )
         self.entry_room.insert(0, "SIGN123")
         self.entry_room.pack(side="left", padx=(0, 6))
 
         user_lbl = ctk.CTkLabel(
-            chat_conn_bar,
+            self.conn_drawer,
             text="User:",
-            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            font=ctk.CTkFont(family="Segoe UI", size=11),
             text_color=PALETTE["text_secondary"],
         )
         user_lbl.pack(side="left", padx=(0, 2))
 
         self.entry_user = ctk.CTkEntry(
-            chat_conn_bar,
-            width=75,
+            self.conn_drawer,
+            width=70,
             height=28,
             font=ctk.CTkFont(family="Segoe UI", size=11),
             fg_color=PALETTE["input_bg"],
             border_color=PALETTE["card_border"],
-            corner_radius=6,
+            corner_radius=9999,
         )
         self.entry_user.insert(0, "Person A")
         self.entry_user.pack(side="left", padx=(0, 6))
 
         self.btn_chat_connect = ctk.CTkButton(
-            chat_conn_bar,
+            self.conn_drawer,
             text="Connect",
             command=self.toggle_chat_connection,
-            fg_color=PALETTE["accent_blue"],
-            hover_color=PALETTE["accent_hover"],
+            fg_color=PALETTE["accent_teal"],
+            hover_color=PALETTE["accent_teal_hover"],
             font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
-            corner_radius=6,
-            width=70,
+            corner_radius=9999,
+            width=72,
             height=28,
         )
-        self.btn_chat_connect.pack(side="left", padx=(0, 6))
-
-        self.lbl_chat_status = ctk.CTkLabel(
-            chat_conn_bar,
-            text="○ Disconnected",
-            font=ctk.CTkFont(family="Segoe UI", size=11),
-            text_color=PALETTE["text_secondary"],
-        )
-        self.lbl_chat_status.pack(side="left", padx=2)
+        self.btn_chat_connect.pack(side="left")
 
         # Chat Messages Transcript
         self.chat_textbox = ctk.CTkTextbox(
             self.card_chat,
             font=ctk.CTkFont(family="Segoe UI", size=12),
-            fg_color=PALETTE["video_bg"],
+            fg_color=PALETTE["input_bg"],
             border_color=PALETTE["card_border"],
             border_width=1,
-            corner_radius=8,
+            corner_radius=16,
             text_color=PALETTE["text_primary"],
         )
-        self.chat_textbox.pack(fill="both", expand=True, padx=16, pady=4)
+        self.chat_textbox.pack(fill="both", expand=True, padx=20, pady=4)
         self.chat_textbox.insert(
             "end",
             "Welcome to Real-Time Sign Chat.\n"
@@ -719,30 +729,30 @@ class SignLanguageApp(ctk.CTk):
 
         # Chat Input Footer
         chat_footer = ctk.CTkFrame(self.card_chat, fg_color="transparent")
-        chat_footer.pack(fill="x", padx=16, pady=(4, 10))
+        chat_footer.pack(fill="x", padx=20, pady=(6, 14))
 
         self.entry_manual_msg = ctk.CTkEntry(
             chat_footer,
             font=ctk.CTkFont(family="Segoe UI", size=12),
-            placeholder_text="Type a message or use recognized sign text...",
-            height=32,
-            corner_radius=8,
+            placeholder_text="Type a message...",
+            height=34,
+            corner_radius=9999,
             fg_color=PALETTE["input_bg"],
             border_color=PALETTE["card_border"],
         )
-        self.entry_manual_msg.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        self.entry_manual_msg.pack(side="left", fill="x", expand=True, padx=(0, 8))
         self.entry_manual_msg.bind("<Return>", lambda _: self._send_manual_message())
 
         self.btn_send_manual = ctk.CTkButton(
             chat_footer,
             text="Send",
             command=self._send_manual_message,
-            fg_color=PALETTE["accent_blue"],
-            hover_color=PALETTE["accent_hover"],
+            fg_color=PALETTE["accent_teal"],
+            hover_color=PALETTE["accent_teal_hover"],
             font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
-            corner_radius=6,
-            width=65,
-            height=32,
+            corner_radius=9999,
+            width=68,
+            height=34,
         )
         self.btn_send_manual.pack(side="left", padx=(0, 6))
 
@@ -750,14 +760,24 @@ class SignLanguageApp(ctk.CTk):
             chat_footer,
             text="Clear",
             command=self._clear_chat_textbox,
-            fg_color="#1E293B",
-            hover_color="#334155",
+            fg_color=PALETTE["btn_secondary"],
+            hover_color=PALETTE["btn_secondary_hover"],
             font=ctk.CTkFont(family="Segoe UI", size=11),
-            corner_radius=6,
-            width=55,
-            height=32,
+            text_color=PALETTE["text_primary"],
+            corner_radius=9999,
+            width=58,
+            height=34,
         )
         self.btn_clear_chat.pack(side="left")
+
+    def _toggle_conn_drawer(self) -> None:
+        self.is_conn_drawer_open = not getattr(self, "is_conn_drawer_open", False)
+        if self.is_conn_drawer_open:
+            self.conn_drawer.pack(fill="x", padx=20, pady=(2, 6), before=self.chat_textbox)
+            self.btn_toggle_conn.configure(text="Settings ▴")
+        else:
+            self.conn_drawer.pack_forget()
+            self.btn_toggle_conn.configure(text="Settings ▾")
 
     # ========================================================
     # Camera Stream & Prediction Loop
@@ -936,82 +956,50 @@ class SignLanguageApp(ctk.CTk):
         self.video_label.configure(image=ctk_img, text="")
         self.fps_lbl.configure(text=f"FPS: {self.current_fps:.1f}")
 
-        # Update sign label & colors with Pinterest / Modern SaaS visual feedback
+        # Update sign label & clean text (no neon, no loud emojis)
         if sign == "No hand detected":
             self.lbl_detected_sign.configure(
-                text="✋ Waiting for hand...",
+                text="Waiting for gesture...",
                 text_color=PALETTE["text_secondary"],
-            )
-            self.lbl_auto_send_tag.configure(
-                text="○ AI Engine Ready · Standby",
-                text_color=PALETTE["text_muted"],
             )
         elif sign == "Model not trained yet":
             self.lbl_detected_sign.configure(
-                text="⚠️ Model not trained yet",
-                text_color=PALETTE["warning_amber"],
-            )
-            self.lbl_auto_send_tag.configure(
-                text="Please train model",
+                text="Model not trained",
                 text_color=PALETTE["warning_amber"],
             )
         elif sign == "UNCERTAIN":
             self.lbl_detected_sign.configure(
-                text=f"❓ UNCERTAIN ({confidence * 100:.1f}%)",
+                text=f"Uncertain ({confidence * 100:.1f}%)",
                 text_color=PALETTE["warning_amber"],
-            )
-            self.lbl_auto_send_tag.configure(
-                text="Hold gesture steady",
-                text_color=PALETTE["text_muted"],
             )
         elif sign == "_NEUTRAL":
             self.lbl_detected_sign.configure(
-                text="💤 Resting Hand",
+                text="Resting hand",
                 text_color=PALETTE["text_secondary"],
             )
-            self.lbl_auto_send_tag.configure(
-                text="Hand neutral",
-                text_color=PALETTE["text_muted"],
-            )
         else:
-            meta = SIGN_INFO.get(sign, {"icon": "✦", "title": sign, "color": PALETTE["success_green"]})
-            icon = meta["icon"]
-            title = meta["title"]
-            color = meta["color"]
+            title = SIGN_INFO.get(sign, sign.replace("_", " ").title())
             self.lbl_detected_sign.configure(
-                text=f"{icon}  {title} ({confidence * 100:.1f}%)",
-                text_color=color,
+                text=f"{title} ({confidence * 100:.1f}%)",
+                text_color=PALETTE["text_primary"],
             )
-            if stability_count >= 6:
-                self.lbl_auto_send_tag.configure(
-                    text="⚡ AUTO-SENT: Dispatched to live chat",
-                    text_color=PALETTE["success_green"],
-                )
-            else:
-                self.lbl_auto_send_tag.configure(
-                    text="⏳ Stabilizing gesture...",
-                    text_color=PALETTE["text_secondary"],
-                )
 
-        # Update confidence & stability progress bars
+        # Update confidence & stability progress bars (clean slim bars)
         self.lbl_confidence.configure(text=f"Confidence: {confidence * 100:.1f}%")
         self.progress_confidence.set(min(1.0, max(0.0, confidence)))
 
-        filled = min(10, max(0, stability_count))
-        empty = 10 - filled
-        dot_str = ("● " * filled) + ("○ " * empty)
         if stability_count >= 6:
             self.lbl_stability.configure(
-                text=f"Stability: {dot_str.strip()} ({stability_count}/10 · STABLE)",
-                text_color=PALETTE["success_green"],
+                text=f"Stability: {stability_count}/10 (Stable)",
+                text_color=PALETTE["accent_teal"],
             )
-            self.progress_stability.configure(progress_color=PALETTE["success_green"])
+            self.progress_stability.configure(progress_color=PALETTE["accent_teal"])
         else:
             self.lbl_stability.configure(
-                text=f"Stability: {dot_str.strip()} ({stability_count}/10)",
+                text=f"Stability: {stability_count}/10",
                 text_color=PALETTE["text_secondary"],
             )
-            self.progress_stability.configure(progress_color=PALETTE["accent_blue"])
+            self.progress_stability.configure(progress_color=PALETTE["accent_teal"])
         self.progress_stability.set(min(1.0, stability_count / 10.0))
 
     def _on_stable_sign_emitted(self, sign: str) -> None:
@@ -1025,7 +1013,7 @@ class SignLanguageApp(ctk.CTk):
                 self.chat_client.send_message(word)
             else:
                 t_str = time.strftime("%H:%M:%S")
-                self._append_chat(f"[{t_str}] {self.entry_user.get()} (Auto-Sign): {word}\n")
+                self._append_chat(f"[{t_str}] {self.entry_user.get()}: {word}\n")
 
     def _on_toggle_landmarks(self) -> None:
         self.show_landmarks = bool(self.switch_landmarks.get())
@@ -1193,17 +1181,19 @@ class SignLanguageApp(ctk.CTk):
                     hover_color=PALETTE["danger_hover"],
                     state="normal",
                 )
+                if hasattr(self, "chat_status_dot"):
+                    self.chat_status_dot.configure(text_color=PALETTE["success_green"])
+                clean_msg = f"Connected ({count} users)" if count > 1 else "Connected"
                 self.lbl_chat_status.configure(
-                    text=f"● {message}",
-                    text_color=PALETTE["success_green"],
+                    text=clean_msg,
+                    text_color=PALETTE["text_primary"],
                 )
 
                 # DUAL CAMERA: If 2 or more people in room, open friend's camera panel!
-                # If only 1 person (you), collapse to single camera window to demonstrate to Sir!
                 if count >= 2:
                     if not getattr(self, "is_dual_cam_active", False):
                         self.is_dual_cam_active = True
-                        self.local_cam_title.pack(anchor="nw", padx=8, pady=(4, 0), before=self.video_label)
+                        self.local_cam_title.pack(anchor="nw", padx=12, pady=(8, 0), before=self.video_label)
                         self.remote_cam_card.pack(fill="both", expand=True, pady=4)
                         self.remote_cam_title.configure(text=f"Remote Camera ({count} people in room)")
                 else:
@@ -1214,12 +1204,14 @@ class SignLanguageApp(ctk.CTk):
             else:
                 self.btn_chat_connect.configure(
                     text="Connect",
-                    fg_color=PALETTE["accent_blue"],
-                    hover_color=PALETTE["accent_hover"],
+                    fg_color=PALETTE["accent_teal"],
+                    hover_color=PALETTE["accent_teal_hover"],
                     state="normal",
                 )
+                if hasattr(self, "chat_status_dot"):
+                    self.chat_status_dot.configure(text_color=PALETTE["text_muted"])
                 self.lbl_chat_status.configure(
-                    text=f"○ {message}",
+                    text="Disconnected",
                     text_color=PALETTE["text_secondary"],
                 )
                 if getattr(self, "is_dual_cam_active", False):
@@ -1279,17 +1271,8 @@ class SignLanguageApp(ctk.CTk):
     # Model Training & Dataset Status Actions
     # ========================================================
     def _update_model_badge(self) -> None:
-        if self.classifier.is_loaded:
-            n_classes = len(self.classifier.classes)
-            self.model_status_label.configure(
-                text=f"● Model Active ({n_classes} Signs Ready)",
-                text_color=PALETTE["success_green"],
-            )
-        else:
-            self.model_status_label.configure(
-                text="○ Model Not Trained Yet",
-                text_color=PALETTE["text_secondary"],
-            )
+        """Safe no-op since header badge was deleted as per specifications."""
+        pass
 
     def _on_click_train(self) -> None:
         self.btn_train.configure(text="Training...", state="disabled")
@@ -1364,10 +1347,10 @@ class SignLanguageApp(ctk.CTk):
         txt = ctk.CTkTextbox(
             top,
             font=ctk.CTkFont(family="Consolas", size=11),
-            fg_color=PALETTE["video_bg"],
+            fg_color=PALETTE["input_bg"],
             border_color=PALETTE["card_border"],
             border_width=1,
-            corner_radius=8,
+            corner_radius=12,
             text_color=PALETTE["text_primary"],
         )
         txt.pack(fill="both", expand=True, padx=20, pady=8)
@@ -1378,9 +1361,9 @@ class SignLanguageApp(ctk.CTk):
             top,
             text="Close",
             command=top.destroy,
-            fg_color="#1E293B",
-            hover_color="#334155",
-            corner_radius=6,
+            fg_color=PALETTE["accent_teal"],
+            hover_color=PALETTE["accent_teal_hover"],
+            corner_radius=9999,
             width=100,
         )
         btn_close.pack(pady=(6, 16))
