@@ -26,12 +26,12 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign Language Live Chat — SRMIST</title>
+  <title>Sign Language Live Chat & Video — SignFlow SRMIST</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #0F172A;
+      background: #0A0D14;
       color: #F8FAFC;
       display: flex;
       flex-direction: column;
@@ -39,24 +39,42 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
       overflow: hidden;
     }
     header {
-      background: #1E293B;
-      border-bottom: 1px solid #334155;
-      padding: 12px 18px;
+      background: #121826;
+      border-bottom: 1px solid #20293A;
+      padding: 12px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 12px;
+    }
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-pill {
+      background: #1E1B4B;
+      color: #818CF8;
+      border: 1px solid #3730A3;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
     }
     .header-title {
       display: flex;
       flex-direction: column;
     }
     .header-title h1 {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
-      letter-spacing: -0.3px;
-      color: #F8FAFC;
+      letter-spacing: -0.2px;
+      color: #FFFFFF;
     }
     .header-title span {
       font-size: 11px;
@@ -66,7 +84,7 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 10px;
+      padding: 5px 12px;
       border-radius: 999px;
       font-size: 11px;
       font-weight: 600;
@@ -85,29 +103,82 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
       gap: 8px;
     }
     .top-controls input {
-      background: #020617;
-      border: 1px solid #334155;
+      background: #090D16;
+      border: 1px solid #20293A;
       color: #F8FAFC;
-      padding: 6px 10px;
-      border-radius: 6px;
+      padding: 7px 12px;
+      border-radius: 8px;
       font-size: 12px;
       outline: none;
+      transition: border-color 0.15s;
+    }
+    .top-controls input:focus {
+      border-color: #6366F1;
     }
     .top-controls button {
-      background: #2563EB;
+      background: #6366F1;
       color: white;
       border: none;
-      padding: 6px 14px;
-      border-radius: 6px;
+      padding: 7px 16px;
+      border-radius: 8px;
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background 0.15s, transform 0.05s;
     }
-    .top-controls button:hover { background: #1D4ED8; }
+    .top-controls button:hover { background: #4F46E5; }
+    .top-controls button:active { transform: scale(0.98); }
+
+    /* Video Strip */
+    #video-grid {
+      display: flex;
+      gap: 14px;
+      padding: 12px 20px;
+      background: #06080E;
+      border-bottom: 1px solid #20293A;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .video-card {
+      position: relative;
+      width: 330px;
+      height: 195px;
+      background: #121826;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #20293A;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+    .video-badge {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(10, 13, 20, 0.85);
+      backdrop-filter: blur(6px);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #F8FAFC;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10B981;
+    }
+
+    /* Chat Section */
     #chat-container {
       flex: 1;
-      padding: 18px;
+      padding: 20px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
@@ -116,7 +187,7 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
     .msg-row {
       display: flex;
       flex-direction: column;
-      max-width: 80%;
+      max-width: 78%;
       animation: fadeIn 0.15s ease-out;
     }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -125,107 +196,114 @@ WEB_CHAT_HTML = """<!DOCTYPE html>
     .msg-meta {
       font-size: 10px;
       color: #94A3B8;
-      margin-bottom: 3px;
+      margin-bottom: 4px;
       display: flex;
       align-items: center;
       gap: 6px;
     }
     .msg-bubble {
-      padding: 10px 14px;
-      border-radius: 12px;
+      padding: 10px 15px;
+      border-radius: 14px;
       font-size: 14px;
-      line-height: 1.4;
+      line-height: 1.45;
       word-break: break-word;
     }
     .msg-row.incoming .msg-bubble {
-      background: #1E293B;
+      background: #121826;
       color: #F8FAFC;
-      border: 1px solid #334155;
-      border-top-left-radius: 2px;
+      border: 1px solid #20293A;
+      border-top-left-radius: 4px;
     }
     .msg-row.outgoing .msg-bubble {
-      background: #2563EB;
+      background: #6366F1;
       color: #FFFFFF;
-      border-top-right-radius: 2px;
-    }
-    .msg-bubble.sign-tag {
-      border-left: 3px solid #10B981;
+      border-top-right-radius: 4px;
+      box-shadow: 0 2px 10px rgba(99, 102, 241, 0.25);
     }
     .sign-badge {
-      display: inline-block;
-      font-size: 9px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
-      padding: 1px 5px;
+      padding: 2px 7px;
       border-radius: 4px;
       background: rgba(16, 185, 129, 0.2);
       color: #34D399;
-      margin-right: 4px;
+      margin-right: 6px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
     }
     .msg-system {
       align-self: center;
-      background: rgba(51, 65, 85, 0.5);
+      background: rgba(30, 41, 59, 0.6);
       color: #94A3B8;
-      padding: 4px 12px;
+      padding: 4px 14px;
       border-radius: 999px;
       font-size: 11px;
+      border: 1px solid #20293A;
     }
     footer {
-      background: #1E293B;
-      border-top: 1px solid #334155;
-      padding: 12px 18px;
+      background: #121826;
+      border-top: 1px solid #20293A;
+      padding: 14px 20px;
       display: flex;
-      gap: 10px;
+      gap: 12px;
     }
     footer input {
       flex: 1;
-      background: #020617;
-      border: 1px solid #334155;
+      background: #090D16;
+      border: 1px solid #20293A;
       color: #F8FAFC;
-      padding: 10px 14px;
-      border-radius: 8px;
+      padding: 11px 16px;
+      border-radius: 10px;
       font-size: 14px;
       outline: none;
+      transition: border-color 0.15s;
     }
-    footer input:focus { border-color: #2563EB; }
+    footer input:focus { border-color: #6366F1; }
     footer button {
-      background: #2563EB;
+      background: #6366F1;
       color: white;
       border: none;
-      padding: 0 20px;
-      border-radius: 8px;
+      padding: 0 24px;
+      border-radius: 10px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background 0.15s, transform 0.05s;
     }
-    footer button:hover { background: #1D4ED8; }
+    footer button:hover { background: #4F46E5; }
+    footer button:active { transform: scale(0.98); }
   </style>
 </head>
 <body>
   <header>
-    <div class="header-title">
-      <h1>Sign Language Live Chat & Video Call</h1>
-      <span>SRM Institute of Science and Technology · Academic Live Demo</span>
+    <div class="brand-wrap">
+      <div class="brand-pill">✋ SIGNFLOW AI</div>
+      <div class="header-title">
+        <h1>Live Communication & Dual Video Call</h1>
+        <span>SRMIST Academic Live Demo · Harshit Tomar (RA2411003030026)</span>
+      </div>
     </div>
     <div class="top-controls">
-      <input id="userName" type="text" value="Person B" placeholder="Your Name" style="width: 100px;">
-      <input id="roomCode" type="text" value="SIGN123" placeholder="Room" style="width: 80px;">
+      <input id="userName" type="text" value="Person B" placeholder="Your Name" style="width: 105px;">
+      <input id="roomCode" type="text" value="SIGN123" placeholder="Room" style="width: 85px;">
       <button id="btnConnect" onclick="toggleConnection()">Reconnect</button>
       <div id="statusBadge" class="status-badge">Connecting...</div>
     </div>
   </header>
 
   <!-- Dual Camera Video Bar: Harshit's Live Camera + Friend's Live Camera -->
-  <div id="video-grid" style="display: flex; gap: 12px; padding: 10px 18px; background: #020617; border-bottom: 1px solid #334155; justify-content: center; flex-wrap: wrap;">
-    <div style="position: relative; width: 320px; height: 190px; background: #0F172A; border-radius: 8px; overflow: hidden; border: 1px solid #334155; display: flex; align-items: center; justify-content: center;">
+  <div id="video-grid">
+    <div class="video-card">
       <img id="remoteVideo" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
-      <span id="remotePlaceholder" style="font-size: 12px; color: #94A3B8; text-align: center; padding: 10px;">Waiting for Harshit's Live Camera...</span>
-      <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(15, 23, 42, 0.85); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: #F8FAFC;">Harshit (Person A)</div>
+      <span id="remotePlaceholder" style="font-size: 12px; color: #94A3B8; text-align: center; padding: 12px;">Waiting for Harshit's Live Camera...</span>
+      <div class="video-badge"><span class="live-dot"></span> Harshit (Person A)</div>
     </div>
-    <div style="position: relative; width: 320px; height: 190px; background: #0F172A; border-radius: 8px; overflow: hidden; border: 1px solid #334155; display: flex; align-items: center; justify-content: center;">
+    <div class="video-card">
       <video id="localVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover;"></video>
-      <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(15, 23, 42, 0.85); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: #F8FAFC;">Your Camera (Person B)</div>
+      <div class="video-badge"><span class="live-dot"></span> Your Camera (Person B)</div>
     </div>
   </div>
 
