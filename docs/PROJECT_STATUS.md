@@ -30,7 +30,6 @@
 |---|---|
 | **Run Unit Tests** | `python -m pytest -v` |
 | **Start Desktop Application** | `python app.py` |
-| **Seed / Reset Demo Dataset** | `python scripts/seed_demo_dataset.py` |
 | **Collect Sign Data (Interactive)** | `python scripts/collect_data.py` |
 | **Collect 2 Sessions for a Sign** | `python scripts/collect_data.py --label HELLO` |
 | **Check Dataset Status** | `python scripts/collect_data.py --status` |

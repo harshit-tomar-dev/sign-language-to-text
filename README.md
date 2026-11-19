@@ -97,35 +97,27 @@ flowchart TD
 ## Installation & Setup
 
 ### Prerequisites
-- Windows 10 / 11
-- **Python 3.11** ([Download 64-bit installer](https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe))
-  > ⚠️ *Check "Add python.exe to PATH" during installation.*
+- Windows 10 / 11 / macOS / Linux
+- **Python 3.11** ([Download Python](https://www.python.org/downloads/))
 
-### Option 1: Automated 1-Click Setup (Recommended)
-Open PowerShell in the project directory:
+### Quickstart Setup
 ```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\setup_new_laptop.ps1
-```
+# 1. Clone the repository
+git clone https://github.com/harshit-tomar-dev/sign-language-to-text.git
+cd sign-language-to-text
 
-### Option 2: Manual Setup
-```powershell
-# 1. Create Python 3.11 virtual environment
+# 2. Create and activate virtual environment
 python -m venv .venv
-
-# 2. Activate environment
-.venv\Scripts\Activate.ps1
+.venv\Scripts\Activate.ps1    # On Linux/macOS: source .venv/bin/activate
 
 # 3. Install dependencies
 pip install -r requirements.txt pytest
 
-# 4. Register package path
-$sitepkg = (python -c "import site; print(site.getsitepackages()[0])") + "\Lib\site-packages"
-(Get-Location).Path + "\src" | Out-File "$sitepkg\sign_language_src.pth" -Encoding ascii
+# 4. Install project package in editable mode
+pip install -e .
 
-# 5. Run automated test suite
-$env:PYTHONIOENCODING="utf-8"
-python -m pytest -v
+# 5. Run the live application
+python app.py
 ```
 
 ---
