@@ -71,9 +71,9 @@ camera:
 hand_detection:
   # Set to 1 for single-hand static sign language vocabulary.
   max_num_hands: 1
-  min_detection_confidence: 0.7         # [TUNE:Phase-2]
-  min_tracking_confidence: 0.5          # [TUNE:Phase-2]
-  model_complexity: 0                   # 0 = lite/fast, 1 = full/accurate [TUNE:Phase-13]
+  min_detection_confidence: 0.60        # Reliable hand detection without dropping frames
+  min_tracking_confidence: 0.50         # Continuous hand tracking across frames
+  model_complexity: 1                   # 1 = full accurate 21-landmark precision
   static_image_mode: false              # false = video mode, enables tracking
   multi_hand_policy: "highest_confidence"
 

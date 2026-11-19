@@ -73,7 +73,7 @@ class SignLanguageApp(ctk.CTk):
         self.cfg = get_config()
         self.detector: HandDetector | None = None
         self.extractor: LandmarkExtractor | None = None
-        self.classifier = SignClassifier(min_confidence=0.60)
+        self.classifier = SignClassifier(min_confidence=0.55)
         self.text_buffer = TextBuffer()
         self.chat_client = ChatClient(
             on_message=self._on_chat_message,
@@ -654,6 +654,14 @@ class SignLanguageApp(ctk.CTk):
                 )
                 return
 
+            # Explicitly request 1280x720 @ 30 FPS for crisp tracking
+            try:
+                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+                self.cap.set(cv2.CAP_PROP_FPS, 30)
+            except Exception:
+                pass
+
             self.is_camera_running = True
             self.btn_toggle_cam.configure(
                 text="Stop Camera",
@@ -750,14 +758,17 @@ class SignLanguageApp(ctk.CTk):
                         dominant_count = c
                         dominant_sign = s
 
-            # Commit word to buffer if stable (7 of 10 votes)
-            if dominant_count >= 7 and dominant_sign:
+            # Reset last_committed_sign if hand was lowered or no valid signs in buffer
+            if not votes:
+                self.last_committed_sign = None
+
+            # Commit word to buffer if stable (6 of 10 votes) and cooldown elapsed
+            if dominant_count >= 6 and dominant_sign:
                 curr_t = time.time()
                 if (curr_t - self.last_commit_time) > self.cooldown_seconds:
-                    if dominant_sign != self.last_committed_sign:
-                        self.last_committed_sign = dominant_sign
-                        self.last_commit_time = curr_t
-                        self.after(0, self._on_stable_sign_emitted, dominant_sign)
+                    self.last_committed_sign = dominant_sign
+                    self.last_commit_time = curr_t
+                    self.after(0, self._on_stable_sign_emitted, dominant_sign)
 
             # Prepare Tkinter image
             h, w = display_frame.shape[:2]
