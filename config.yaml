@@ -132,12 +132,10 @@ dataset:
     - "NO"            # closed fist, thumb extended DOWN
     - "SORRY"         # closed fist, thumb tucked, knuckles to camera
     - "HELP"          # thumb up + index sideways (L shape)
-    - "WATER"         # index + middle + ring extended and SPREAD (W shape)
     - "EAT"           # all fingertips curled toward thumb (claw / pinch)
     - "I_LOVE_YOU"    # thumb + index + pinky extended, middle + ring folded
     - "I_AM_FINE"     # 5-finger spread hand with thumb touching chest (output: "I am fine")
     - "GOODBYE"       # open hand tilted / waving gesture (output: "Goodbye")
-    - "MY_NAME_IS"    # hand across chest / heart gesture (output: "My name is Harshit.")
 
   neutral_class: ""             # Neutral state is gated by hand detector and confidence
 

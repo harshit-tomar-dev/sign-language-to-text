@@ -59,7 +59,10 @@ secrets.yaml
 data/raw/**
 data/interim/**
 data/processed/**
-data/features/**
+# Whitelist ready-to-run demo dataset and model bundle (<7MB total)
+!data/features/
+!data/features/**
+!models/v1/random_forest.joblib
 
 # Keep the directory skeleton so a fresh clone has somewhere to write
 !data/**/.gitkeep
@@ -73,6 +76,7 @@ data/metadata/**/*.npy
 # Explicit media/array excludes anywhere under data/
 *.npz
 *.npy
+!data/features/arrays/*.npy
 *.jpg
 *.jpeg
 *.png
@@ -99,6 +103,7 @@ models/**/*.h5
 models/**/*.onnx
 !models/**/model_metadata.json
 !models/**/.gitkeep
+!models/v1/random_forest.joblib
 
 # ==============================================================================
 # REPORTS & LOGS

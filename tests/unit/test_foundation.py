@@ -35,12 +35,12 @@ def test_config_loads_and_validates() -> None:
     assert config.project.short_name == "sign-language-to-text"
     assert config.features.base_dim == 63
     assert config.features.rotation_invariant is False
-    assert len(config.dataset.classes) == 13
+    assert len(config.dataset.classes) == 11
     assert "YES" in config.dataset.classes
     assert "NO" in config.dataset.classes
     assert "I_AM_FINE" in config.dataset.classes
     assert "GOODBYE" in config.dataset.classes
-    assert "MY_NAME_IS" in config.dataset.classes
+    assert "THANK_YOU" in config.dataset.classes
     assert isinstance(config.dataset.classes[3], str)
     assert isinstance(config.dataset.classes[4], str)
 

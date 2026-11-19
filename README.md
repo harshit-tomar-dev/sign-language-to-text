@@ -4,7 +4,7 @@
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-0.10.14-green.svg)](https://developers.google.com/mediapipe)
 [![Scikit-Learn](https://img.shields.io/badge/scikit--learn-1.9.1-orange.svg)](https://scikit-learn.org/)
 [![OpenCV](https://img.shields.io/badge/OpenCV-4.11-red.svg)](https://opencv.org/)
-[![Tests Passing](https://img.shields.io/badge/Tests-57%2F57%20Passed-brightgreen.svg)](tests/)
+[![Tests Passing](https://img.shields.io/badge/Tests-58%2F58%20Passed-brightgreen.svg)](tests/)
 [![Architecture](https://img.shields.io/badge/Architecture-Modular%20ML%20Pipeline-blueviolet.svg)](docs/ARCHITECTURE.md)
 [![License](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 
@@ -76,7 +76,7 @@ flowchart TD
 
 ---
 
-## 13 Final Sign Classes
+## 11 Supported Sign Classes
 
 | # | Sign Class | Natural Language Output | Hand Configuration |
 |---|---|---|---|
@@ -87,12 +87,10 @@ flowchart TD
 | 5 | `NO` | `"No"` | Closed fist, thumb extended strictly DOWNWARDS |
 | 6 | `SORRY` | `"Sorry"` | Closed fist, thumb tucked against fingers, knuckles to camera |
 | 7 | `HELP` | `"Help"` | Thumb up + index finger pointing horizontally (L-shape) |
-| 8 | `WATER` | `"Water"` | Index, middle, and ring fingers extended and spread (W-shape) |
-| 9 | `EAT` | `"Eat"` | All 5 fingertips curled together toward the thumb (claw/pinch) |
-| 10 | `I_LOVE_YOU` | `"I love you"` | Thumb, index, and pinky extended; middle and ring folded |
-| 11 | `YOU` | `"You"` | Index finger only extended toward the camera |
-| 12 | `NAME` | `"My name is"` | Index and middle fingers extended together (H-shape) |
-| 13 | `MY_NAME_IS` | **"My name is Harshit."** | Hand placed flat/cupped across the heart/chest |
+| 8 | `EAT` | `"Eat"` | All 5 fingertips curled together toward the thumb (claw/pinch) |
+| 9 | `I_LOVE_YOU` | `"I love you"` | Thumb, index, and pinky extended; middle and ring folded |
+| 10 | `I_AM_FINE` | `"I am fine"` | 5-finger spread hand placed against chest/torso |
+| 11 | `GOODBYE` | `"Goodbye"` | Open hand tilted / waving gesture to camera |
 
 ---
 
@@ -134,12 +132,12 @@ python -m pytest -v
 
 ## How to Run & Demonstrate the Project
 
-### 1. Run Automated Test Suite (57 Tests)
+### 1. Run Automated Test Suite (58 Tests)
 ```powershell
 $env:PYTHONIOENCODING="utf-8"
 python -m pytest -v
 ```
-All 57 unit tests pass with 100% verification.
+All 58 unit tests pass with 100% verification.
 
 ---
 

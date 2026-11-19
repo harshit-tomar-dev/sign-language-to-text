@@ -82,12 +82,10 @@ SIGN_INFO: dict[str, str] = {
     "NO": "No",
     "SORRY": "Sorry",
     "HELP": "Help",
-    "WATER": "Water",
     "EAT": "Eat",
     "I_LOVE_YOU": "I Love You",
     "I_AM_FINE": "I Am Fine",
     "GOODBYE": "Goodbye",
-    "MY_NAME_IS": "My name is Harshit",
 }
 
 
@@ -124,7 +122,7 @@ class SignLanguageApp(ctk.CTk):
         self.cfg = get_config()
         self.detector: HandDetector | None = None
         self.extractor: LandmarkExtractor | None = None
-        self.classifier = SignClassifier(min_confidence=0.55)
+        self.classifier = SignClassifier(min_confidence=0.48)
         self.text_buffer = TextBuffer()
         self.chat_client = ChatClient(
             on_message=self._on_chat_message,
@@ -169,9 +167,11 @@ class SignLanguageApp(ctk.CTk):
             self.cooldown_seconds = float(self.cfg.inference.stabilisation.cooldown_seconds)
             self.prediction_buffer = deque(maxlen=int(self.cfg.inference.stabilisation.window_size))
             self.detector = HandDetector(
-                max_num_hands=1,
+                max_num_hands=self.cfg.hand_detection.max_num_hands,
                 min_detection_confidence=self.cfg.hand_detection.min_detection_confidence,
                 min_tracking_confidence=self.cfg.hand_detection.min_tracking_confidence,
+                model_complexity=self.cfg.hand_detection.model_complexity,
+                static_image_mode=self.cfg.hand_detection.static_image_mode,
             )
             self.extractor = LandmarkExtractor(self.cfg.features)
         except Exception as e:
