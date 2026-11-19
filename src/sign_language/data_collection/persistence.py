@@ -105,6 +105,52 @@ class DatasetWriter:
         )
         return written
 
+    def delete_class(self, label: str) -> int:
+        """Delete all samples belonging to label from manifest and delete their .npy files."""
+        if not self._manifest_path.exists():
+            return 0
+
+        rows = []
+        deleted_count = 0
+        with self._manifest_path.open("r", newline="", encoding="utf-8") as fh:
+            reader = csv.DictReader(fh)
+            for row in reader:
+                if row["label"] == label:
+                    npy_path = self._arrays_dir / row["npy_file"]
+                    if npy_path.exists():
+                        try:
+                            npy_path.unlink()
+                        except Exception:
+                            pass
+                    deleted_count += 1
+                else:
+                    rows.append(row)
+
+        with self._manifest_path.open("w", newline="", encoding="utf-8") as fh:
+            writer = csv.DictWriter(fh, fieldnames=_CSV_FIELDNAMES)
+            writer.writeheader()
+            writer.writerows(rows)
+
+        logger.info("Deleted %d samples for class '%s'", deleted_count, label)
+        return deleted_count
+
+    def clear_all(self) -> int:
+        """Clear all samples from manifest and delete all npy array files."""
+        if not self._manifest_path.exists():
+            return 0
+        count = 0
+        for f in self._arrays_dir.glob("*.npy"):
+            try:
+                f.unlink()
+                count += 1
+            except Exception:
+                pass
+        with self._manifest_path.open("w", newline="", encoding="utf-8") as fh:
+            writer = csv.DictWriter(fh, fieldnames=_CSV_FIELDNAMES)
+            writer.writeheader()
+        logger.info("Cleared all dataset samples (%d files deleted)", count)
+        return count
+
 
 class DatasetReader:
     """Reads the full dataset from disk into memory.

@@ -143,6 +143,22 @@ def main() -> None:
         action="store_true",
         help="Print current dataset status and exit",
     )
+    parser.add_argument(
+        "--delete",
+        type=str,
+        default=None,
+        help="Delete all stored sessions for a specific sign and exit (e.g. --delete HELLO)",
+    )
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Delete all existing recorded sessions for the specified --label before recording",
+    )
+    parser.add_argument(
+        "--reset-all",
+        action="store_true",
+        help="Delete all recorded data across all classes",
+    )
     args = parser.parse_args()
 
     configure_logging()
@@ -156,6 +172,19 @@ def main() -> None:
     reader = DatasetReader(features_dir)
     writer = DatasetWriter(features_dir)
 
+    if args.reset_all:
+        writer.clear_all()
+        print("[SUCCESS] All dataset files cleared across all classes.")
+        print_status(cfg, DatasetReader(features_dir))
+        return
+
+    if args.delete:
+        del_label = args.delete.strip().upper()
+        deleted = writer.delete_class(del_label)
+        print(f"\n[SUCCESS] Deleted {deleted} stored sample(s)/sessions for '{del_label}'.")
+        print_status(cfg, DatasetReader(features_dir))
+        return
+
     if args.status:
         print_status(cfg, reader)
         return
@@ -167,6 +196,11 @@ def main() -> None:
             print(f"[ERROR] '{label}' is not in configured vocabulary.")
             print(f"Available signs: {', '.join(cfg.dataset.classes)}")
             sys.exit(1)
+
+        if args.reset:
+            deleted = writer.delete_class(label)
+            print(f"[RESET] Deleted {deleted} existing sample(s) for '{label}'.")
+            reader = DatasetReader(features_dir)
 
         extractor = LandmarkExtractor(cfg.features)
         validator = FrameValidator(cfg.dataset.validation)
@@ -214,14 +248,34 @@ def main() -> None:
         print("  [2] Record All Signs Sequentially (2 sessions each)")
         print("  [3] Show Dataset Status Table")
         print("  [4] Train Random Forest Model Now")
+        print("  [5] Reset / Delete Sessions for a Sign")
         print("  [0] Exit")
         print("=" * 50)
 
-        choice = input("Enter choice (0-4): ").strip()
+        choice = input("Enter choice (0-5): ").strip()
 
         if choice == "0":
             print("Exiting.")
             break
+        elif choice == "5":
+            print("\nAvailable Sign Classes:")
+            for idx, c in enumerate(cfg.dataset.classes, 1):
+                sessions = len(reader.session_counts().get(c, {}))
+                print(f"  {idx:2d}. {c:<14} ({sessions} sessions)")
+            val = input("\nEnter sign number or name to RESET: ").strip().upper()
+            if val.isdigit() and 1 <= int(val) <= len(cfg.dataset.classes):
+                target = cfg.dataset.classes[int(val) - 1]
+            elif val in cfg.dataset.classes:
+                target = val
+            else:
+                print("Invalid sign selection.")
+                continue
+            confirm = input(f"Are you sure you want to delete all recordings for '{target}'? (y/n): ").strip().lower()
+            if confirm == "y":
+                deleted = writer.delete_class(target)
+                reader = DatasetReader(features_dir)
+                print(f"✓ Deleted {deleted} samples for '{target}'.")
+            print_status(cfg, reader)
         elif choice == "3":
             print_status(cfg, reader)
         elif choice == "4":

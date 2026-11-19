@@ -50,3 +50,16 @@ def test_chat_server_and_client_roundtrip():
     finally:
         client_a.disconnect()
         client_b.disconnect()
+
+
+def test_web_chat_html_serving():
+    import urllib.request
+    server = ChatServer(host="127.0.0.1", port=8798)
+    server.start_background()
+    time.sleep(0.15)
+
+    with urllib.request.urlopen("http://127.0.0.1:8798/") as resp:
+        assert resp.status == 200
+        content = resp.read().decode("utf-8")
+        assert "Sign Language Live Chat" in content
+        assert "SIGN123" in content

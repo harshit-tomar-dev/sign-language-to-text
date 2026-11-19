@@ -125,6 +125,13 @@ class ModelTrainer:
         reader = DatasetReader(self.features_dir)
         X, y, session_ids = reader.load()
 
+        if target_classes:
+            target_set = set(target_classes)
+            mask = np.array([lbl in target_set for lbl in y], dtype=bool)
+            X = X[mask]
+            y = [lbl for lbl, m in zip(y, mask) if m]
+            session_ids = [s for s, m in zip(session_ids, mask) if m]
+
         unique_classes = sorted(list(set(y)))
         n_classes = len(unique_classes)
         total_samples = len(y)

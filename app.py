@@ -81,6 +81,16 @@ class SignLanguageApp(ctk.CTk):
         )
         self.local_server: ChatServer | None = None
 
+        # Detect local network IP for LAN two-person chat
+        try:
+            import socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            self.local_ip = s.getsockname()[0]
+            s.close()
+        except Exception:
+            self.local_ip = "127.0.0.1"
+
         # State Variables
         self.is_camera_running = False
         self.cap: cv2.VideoCapture | None = None
@@ -435,9 +445,41 @@ class SignLanguageApp(ctk.CTk):
         )
         self.card_chat.pack(fill="both", expand=True)
 
+        # Title & LAN IP Display Bar
+        chat_top_bar = ctk.CTkFrame(self.card_chat, fg_color="transparent")
+        chat_top_bar.pack(fill="x", padx=14, pady=(6, 2))
+
+        lbl_chat_title = ctk.CTkLabel(
+            chat_top_bar,
+            text="TWO-PERSON LIVE CHAT (ROOM)",
+            font=ctk.CTkFont(family="Arial", size=11, weight="bold"),
+            text_color=PALETTE["text_primary"],
+        )
+        lbl_chat_title.pack(side="left")
+
+        lbl_ip_info = ctk.CTkLabel(
+            chat_top_bar,
+            text=f"LAN IP: {self.local_ip}",
+            font=ctk.CTkFont(family="Arial", size=10),
+            text_color=PALETTE["text_secondary"],
+        )
+        lbl_ip_info.pack(side="right")
+
+        self.btn_global_share = ctk.CTkButton(
+            chat_top_bar,
+            text="Global Link (Other City)",
+            command=self._start_global_tunnel,
+            fg_color="#334155",
+            hover_color="#475569",
+            font=ctk.CTkFont(family="Arial", size=10, weight="bold"),
+            height=24,
+            width=140,
+        )
+        self.btn_global_share.pack(side="right", padx=(0, 8))
+
         # Chat Connection Header (Host, Port, Room Code, Username, Connect)
         chat_conn_bar = ctk.CTkFrame(self.card_chat, fg_color="transparent")
-        chat_conn_bar.pack(fill="x", padx=14, pady=(8, 2))
+        chat_conn_bar.pack(fill="x", padx=14, pady=(2, 2))
 
         host_lbl = ctk.CTkLabel(
             chat_conn_bar,
@@ -821,9 +863,84 @@ class SignLanguageApp(ctk.CTk):
     # ========================================================
     # Real-Time WebSocket Chat Logic
     # ========================================================
+    def _start_global_tunnel(self) -> None:
+        """Launch Cloudflare Quick Tunnel in background so friends in other cities can connect."""
+        def run():
+            import re
+            import shutil
+            import subprocess
+
+            self.btn_global_share.configure(text="Creating Link...", state="disabled")
+
+            # Ensure local server is running on port 8765
+            if not self.local_server:
+                try:
+                    self.local_server = ChatServer(host="0.0.0.0", port=8765)
+                    self.local_server.start_background()
+                    time.sleep(0.3)
+                except Exception as exc:
+                    logger.warning("Could not auto-start local server: %s", exc)
+
+            cloudflared = shutil.which("cloudflared") or r"C:\Program Files (x86)\cloudflared\cloudflared.exe"
+            try:
+                proc = subprocess.Popen(
+                    [cloudflared, "tunnel", "--url", "http://127.0.0.1:8765"],
+                    stderr=subprocess.PIPE,
+                    stdout=subprocess.DEVNULL,
+                    text=True,
+                    bufsize=1,
+                )
+                domain = None
+                pattern = re.compile(r"https://([a-zA-Z0-9\-\.]+\.trycloudflare\.com)")
+                t0 = time.time()
+                while time.time() - t0 < 15:
+                    line = proc.stderr.readline()
+                    if not line:
+                        continue
+                    m = pattern.search(line)
+                    if m:
+                        domain = m.group(1)
+                        break
+
+                if domain:
+                    web_link = f"https://{domain}"
+                    # Copy web link to clipboard for instant sharing
+                    try:
+                        self.clipboard_clear()
+                        self.clipboard_append(web_link)
+                    except Exception:
+                        pass
+
+                    self._append_chat(
+                        f"\n=========================================\n"
+                        f"★ GLOBAL WEB CHAT LINK CREATED ★\n"
+                        f"Send this link to your friend:\n"
+                        f"👉 {web_link} 👈\n\n"
+                        f"Your friend can open this in ANY browser\n"
+                        f"(Chrome, Safari on phone or PC).\n"
+                        f"NO project or Python installation needed!\n"
+                        f"(Web link copied to your clipboard!)\n"
+                        f"=========================================\n"
+                    )
+                    self.btn_global_share.configure(text="Link Copied!", state="normal")
+                else:
+                    self.btn_global_share.configure(text="Tunnel Failed", state="normal")
+            except Exception as e:
+                logger.error("Failed to launch cloudflared tunnel: %s", e)
+                self.btn_global_share.configure(text="Error", state="normal")
+
+        threading.Thread(target=run, daemon=True).start()
+
     def toggle_chat_connection(self) -> None:
         if not self.chat_client.is_connected:
-            host = self.entry_host.get().strip() or "127.0.0.1"
+            raw_host = self.entry_host.get().strip() or "127.0.0.1"
+            cleaned_host = (
+                raw_host.replace("https://", "")
+                .replace("http://", "")
+                .replace("wss://", "")
+                .replace("ws://", "")
+                .rstrip("/")
+            )
             port_str = self.entry_port.get().strip() or "8765"
             room = self.entry_room.get().strip().upper() or "SIGN123"
             user = self.entry_user.get().strip() or "Person"
@@ -833,8 +950,9 @@ class SignLanguageApp(ctk.CTk):
             except ValueError:
                 port = 8765
 
-            # If connecting to localhost or 127.0.0.1 and no server is running, auto-start local server
-            if host in ("localhost", "127.0.0.1", "0.0.0.0") and not self.local_server:
+            # If connecting to localhost, 127.0.0.1, or own LAN IP and no server is running, auto-start local server
+            local_aliases = ("localhost", "127.0.0.1", "0.0.0.0", getattr(self, "local_ip", ""))
+            if cleaned_host in local_aliases and not self.local_server:
                 try:
                     self.local_server = ChatServer(host="0.0.0.0", port=port)
                     self.local_server.start_background()
@@ -842,7 +960,17 @@ class SignLanguageApp(ctk.CTk):
                 except Exception as exc:
                     logger.warning("Could not auto-start local chat server: %s", exc)
 
-            server_url = f"ws://{host}:{port}"
+            if raw_host.startswith("wss://") or raw_host.startswith("ws://"):
+                server_url = raw_host
+            elif (
+                ".trycloudflare.com" in cleaned_host
+                or ".ngrok" in cleaned_host
+                or ".loca.lt" in cleaned_host
+            ):
+                server_url = f"wss://{cleaned_host}"
+            else:
+                server_url = f"ws://{cleaned_host}:{port}"
+
             self.btn_chat_connect.configure(text="Connecting...", state="disabled")
             self.chat_client.connect(
                 server_url=server_url,

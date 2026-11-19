@@ -52,15 +52,21 @@ def main() -> None:
         action="store_true",
         help="Train even if some target classes have < 2 sessions",
     )
+    parser.add_argument(
+        "--classes",
+        nargs="+",
+        default=None,
+        help="Specific classes to train on (e.g. --classes HELLO THANK_YOU PLEASE)",
+    )
     args = parser.parse_args()
 
     cfg = get_config()
-    target_classes = cfg.dataset.classes
+    target_classes = [c.strip().upper() for c in args.classes] if args.classes else cfg.dataset.classes
 
     print("=" * 70)
     print("       SIGN LANGUAGE CLASSIFIER: MODEL TRAINING")
     print("       Algorithm : Random Forest Classifier (200 Trees)")
-    print("       Target    : 13 Sign Classes (2 Sessions Per Class)")
+    print(f"       Target    : {len(target_classes)} Sign Classes ({', '.join(target_classes)})")
     print("=" * 70)
 
     trainer = ModelTrainer()

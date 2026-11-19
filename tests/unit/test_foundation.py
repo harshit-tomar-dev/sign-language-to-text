@@ -38,6 +38,8 @@ def test_config_loads_and_validates() -> None:
     assert len(config.dataset.classes) == 13
     assert "YES" in config.dataset.classes
     assert "NO" in config.dataset.classes
+    assert "I_AM_FINE" in config.dataset.classes
+    assert "GOODBYE" in config.dataset.classes
     assert "MY_NAME_IS" in config.dataset.classes
     assert isinstance(config.dataset.classes[3], str)
     assert isinstance(config.dataset.classes[4], str)
